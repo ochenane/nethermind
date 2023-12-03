@@ -53,6 +53,8 @@ namespace Nethermind.Monitoring
 
         public async Task StartAsync()
         {
+            // new LOHListener();
+
             if (!string.IsNullOrWhiteSpace(_pushGatewayUrl))
             {
                 MetricPusherOptions pusherOptions = new MetricPusherOptions

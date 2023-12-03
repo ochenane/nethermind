@@ -32,5 +32,6 @@ namespace Nethermind.Stats
         SyncPeerNodeDetails EthNodeDetails { get; }
         SyncPeerNodeDetails LesNodeDetails { get; }
         CompatibilityValidationType? FailedCompatibilityValidation { get; set; }
+        DisconnectReason? LastLocalDisconnect { get; }
     }
 }

@@ -4,12 +4,14 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DotNetty.Transport.Channels;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
+using Nethermind.Core.Extensions;
 using Nethermind.Logging;
 using Nethermind.Network.Contract.P2P;
 using Nethermind.Network.P2P.Analyzers;
@@ -18,6 +20,7 @@ using Nethermind.Network.P2P.Messages;
 using Nethermind.Network.P2P.ProtocolHandlers;
 using Nethermind.Network.Rlpx;
 using Nethermind.Stats.Model;
+using Prometheus;
 
 namespace Nethermind.Network.P2P
 {
@@ -157,6 +160,44 @@ namespace Nethermind.Network.P2P
 
         private (DisconnectReason, string?)? _disconnectAfterInitialized = null;
 
+        private static readonly Histogram SessionHandleMessageLatency = Prometheus.Metrics.CreateHistogram(
+            "session_handle_message_latency", "handle message latency",
+            new HistogramConfiguration()
+            {
+                LabelNames = new[] { "protocol", "packet_type", "state" },
+                Buckets = Histogram.PowersOfTenDividedBuckets(1, 8, 10)
+            });
+
+        private static readonly Histogram SessionHandleMessageSize = Prometheus.Metrics.CreateHistogram(
+            "session_handle_message_size", "handle message size",
+            new HistogramConfiguration()
+            {
+                LabelNames = new[] { "protocol", "packet_type", "client" },
+                Buckets = Histogram.PowersOfTenDividedBuckets(1, 8, 20)
+            });
+
+        public ConcurrentQueue<string> PastMessages { get; internal set; } = new ConcurrentQueue<string>();
+
+        public void AddPastMessages(string msg)
+        {
+            PastMessages.Enqueue($"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} {msg} {(_channel.Active ? "A" : "I")}");
+
+            while (PastMessages.Count > 50)
+            {
+                PastMessages.TryDequeue(out string str);
+            }
+        }
+
+        public void PrintPastMessages()
+        {
+            int i = 0;
+            foreach (string sessionPastMessage in PastMessages)
+            {
+                _logger.Warn($"{i} -> {sessionPastMessage}");
+                i++;
+            }
+        }
+
         public void ReceiveMessage(ZeroPacket zeroPacket)
         {
             Interlocked.Add(ref Metrics.P2PBytesReceived, zeroPacket.Content.ReadableBytes);
@@ -193,13 +234,30 @@ namespace Nethermind.Network.P2P
 
             zeroPacket.PacketType = (byte)messageId;
             IProtocolHandler protocolHandler = _protocols[protocol];
-            if (protocolHandler is IZeroProtocolHandler zeroProtocolHandler)
+
+            Stopwatch sw = Stopwatch.StartNew();
+            SessionHandleMessageSize.WithLabels(
+                protocol,
+                zeroPacket.PacketType.ToString(),
+                _node?.ClientType.ToString()
+            ).Observe(zeroPacket.Content.ReadableBytes);
+            try
             {
-                zeroProtocolHandler.HandleMessage(zeroPacket);
+                if (protocolHandler is IZeroProtocolHandler zeroProtocolHandler)
+                {
+                    zeroProtocolHandler.HandleMessage(zeroPacket);
+                }
+                else
+                {
+                    protocolHandler.HandleMessage(new Packet(zeroPacket));
+                }
+
+                SessionHandleMessageLatency.WithLabels(protocol, zeroPacket.PacketType.ToString(), "success").Observe(sw.ElapsedMicroseconds());
             }
-            else
+            catch (Exception e)
             {
-                protocolHandler.HandleMessage(new Packet(zeroPacket));
+                SessionHandleMessageLatency.WithLabels(protocol, zeroPacket.PacketType.ToString(), e.GetType().Name).Observe(sw.ElapsedMicroseconds());
+                throw;
             }
         }
 
@@ -264,9 +322,27 @@ namespace Nethermind.Network.P2P
 
             packet.PacketType = messageId;
 
-            if (State < SessionState.DisconnectingProtocols)
+            Stopwatch sw = Stopwatch.StartNew();
+            try
             {
-                _protocols[protocol].HandleMessage(packet);
+                // PastMessages.Enqueue($"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} B2 {protocol}->{packet.PacketType.ToString()} of size {packet.Data.Length}");
+                if (State < SessionState.DisconnectingProtocols)
+                {
+                    _protocols[protocol].HandleMessage(packet);
+                }
+                else
+                {
+                    _logger.Trace($"Skipping message of type {packet.Protocol} {packet.PacketType}");
+                }
+
+                // PastMessages.Enqueue($"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} R2 {protocol}->{packet.PacketType.ToString()} of size {packet.Data.Length} took {sw.ElapsedMilliseconds}ms");
+                SessionHandleMessageLatency.WithLabels(protocol, packet.PacketType.ToString(), "success").Observe(sw.ElapsedMicroseconds());
+            }
+            catch (Exception e)
+            {
+                // PastMessages.Enqueue($"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff} R2 {protocol}->{packet.PacketType.ToString()} of size {packet.Data.Length} took {sw.ElapsedMilliseconds}ms and failed {e}");
+                SessionHandleMessageLatency.WithLabels(protocol, packet.PacketType.ToString(), e.GetType().Name).Observe(sw.ElapsedMicroseconds());
+                throw;
             }
         }
 
@@ -274,6 +350,9 @@ namespace Nethermind.Network.P2P
         {
             return _protocols.TryGetValue(protocolCode, out handler);
         }
+
+        DateTime _initializedOn = DateTime.Now;
+        public bool IsWellEstablished => DateTime.Now - _initializedOn > TimeSpan.FromMinutes(1);
 
         public void Init(byte p2PVersion, IChannelHandlerContext context, IPacketSender packetSender)
         {
@@ -298,6 +377,7 @@ namespace Nethermind.Network.P2P
                 _context = context;
                 _packetSender = packetSender;
                 State = SessionState.Initialized;
+                _initializedOn = DateTime.Now;;
             }
 
             Initialized?.Invoke(this, EventArgs.Empty);
@@ -351,6 +431,9 @@ namespace Nethermind.Network.P2P
             HandshakeComplete?.Invoke(this, EventArgs.Empty);
         }
 
+        private Counter SessionInitiateDisconnect = Prometheus.Metrics.CreateCounter("session_initiate_disconnect",
+            "initiate disconnect", "reason", "direction", "state", "well_established", "client_type");
+
         public void InitiateDisconnect(DisconnectReason disconnectReason, string? details = null)
         {
             EthDisconnectReason ethDisconnectReason = disconnectReason.ToEthDisconnectReason();
@@ -400,6 +483,9 @@ namespace Nethermind.Network.P2P
                     return;
                 }
 
+                SessionInitiateDisconnect.WithLabels(disconnectReason.ToString(), Direction.ToString(),
+                    _state.ToString(), IsWellEstablished.ToString(), Node.ClientType.ToString()).Inc();
+
                 State = SessionState.DisconnectingProtocols;
             }
 
@@ -442,9 +528,22 @@ namespace Nethermind.Network.P2P
         }
 
         public SessionState BestStateReached { get; private set; }
+        public bool HelloReceived { get; set; }
+
+        private Counter MarkDisconnectReason =
+            Prometheus.Metrics.CreateCounter("session_mark_disconnect_reason", "Mark disconnect reason",
+                "reason",
+                "state",
+                "direction",
+                "session_direction",
+                "is_well_established",
+                "client_type",
+                "category",
+                "hello_received");
 
         public void MarkDisconnected(DisconnectReason disconnectReason, DisconnectType disconnectType, string details)
         {
+            var oriState = State;
             lock (_sessionStateLock)
             {
                 if (State >= SessionState.Disconnecting)
@@ -456,6 +555,37 @@ namespace Nethermind.Network.P2P
 
                 State = SessionState.Disconnecting;
             }
+
+            // AddPastMessages($"Mark disconnect {disconnectReason} {oriState} {disconnectType} {Direction} {IsWellEstablished} {Node.ClientType}");
+
+            string category = "normal";
+            if (_node.IsBootnode)
+            {
+                category = "bootnodes";
+            }
+            if (_node.IsStatic)
+            {
+                category = "static";
+            }
+
+            /*
+            if (disconnectReason == DisconnectReason.TooManyPeers && HelloReceived)
+            {
+                AddPastMessages("Strange too many peers");
+                PrintPastMessages();
+            }
+            */
+
+            MarkDisconnectReason.WithLabels(
+                disconnectReason.ToString(),
+                oriState.ToString(),
+                disconnectType.ToString(),
+                Direction.ToString(),
+                IsWellEstablished.ToString(),
+                Node.ClientType.ToString(),
+                category,
+                HelloReceived.ToString()
+            ).Inc();
 
             if (_isTracked)
             {
@@ -517,6 +647,7 @@ namespace Nethermind.Network.P2P
             lock (_sessionStateLock)
             {
                 State = SessionState.Disconnected;
+                _disconnectReason = (disconnectReason, disconnectType, details);
             }
 
             if (Disconnected is not null)
@@ -646,6 +777,7 @@ namespace Nethermind.Network.P2P
         }
 
         private bool _isTracked = false;
+        public (DisconnectReason disconnectReason, DisconnectType disconnectType, string details) _disconnectReason;
 
         public void StartTrackingSession()
         {

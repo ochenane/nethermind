@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Nethermind.Core.Exceptions;
 using Nethermind.Core.Extensions;
 using Nethermind.Logging;
 using Nethermind.Synchronization.Peers;
+using Prometheus;
 
 namespace Nethermind.Synchronization.ParallelSync
 {
@@ -24,6 +26,41 @@ namespace Nethermind.Synchronization.ParallelSync
         private ISyncPeerPool SyncPeerPool { get; }
 
         private readonly SemaphoreSlim _concurrentProcessingSemaphore;
+
+        public static Histogram DispatchLatency =
+            Prometheus.Metrics.CreateHistogram("sync_dispatcher_dispatch_latency", "Latency", new HistogramConfiguration()
+            {
+                LabelNames = new []{"feed", "status"},
+                Buckets = Histogram.PowersOfTenDividedBuckets(2, 8, 10),
+            });
+
+        public static Histogram PrepareRequestLatency =
+            Prometheus.Metrics.CreateHistogram("sync_dispatcher_prepare_request_latency", "Latency", new HistogramConfiguration()
+            {
+                LabelNames = new []{"feed"},
+                Buckets = Histogram.PowersOfTenDividedBuckets(2, 8, 10),
+            });
+
+        public static Histogram DoDispatchLatency =
+            Prometheus.Metrics.CreateHistogram("sync_dispatcher_do_dispatch_latency", "Latency", new HistogramConfiguration()
+            {
+                LabelNames = new []{"feed"},
+                Buckets = Histogram.PowersOfTenDividedBuckets(2, 8, 10),
+            });
+
+        public static Histogram AllocateLatency =
+            Prometheus.Metrics.CreateHistogram("sync_dispatcher_allocate_latency", "Latency", new HistogramConfiguration()
+            {
+                LabelNames = new []{"feed"},
+                Buckets = Histogram.PowersOfTenDividedBuckets(2, 8, 10),
+            });
+
+        public static Histogram ResponseLatency =
+            Prometheus.Metrics.CreateHistogram("sync_dispatcher_response_latency", "Latency", new HistogramConfiguration()
+            {
+                LabelNames = new []{"feed", "status"},
+                Buckets = Histogram.PowersOfTenDividedBuckets(2, 8, 10),
+            });
 
         public SyncDispatcher(
             int maxNumberOfProcessingThread,
@@ -82,7 +119,9 @@ namespace Nethermind.Synchronization.ParallelSync
                     else if (currentStateLocal == SyncFeedState.Active)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
+                        var sw = Stopwatch.StartNew();
                         T request = await (Feed.PrepareRequest(cancellationToken) ?? Task.FromResult<T>(default!)); // just to avoid null refs
+                        PrepareRequestLatency.WithLabels(Feed.GetType().Name).Observe(sw.ElapsedMicroseconds());
                         if (request is null)
                         {
                             if (!Feed.IsMultiFeed)
@@ -94,7 +133,9 @@ namespace Nethermind.Synchronization.ParallelSync
                             continue;
                         }
 
+                        sw.Restart();
                         SyncPeerAllocation allocation = await Allocate(request);
+                        AllocateLatency.WithLabels(Feed.GetType().Name).Observe(sw.ElapsedMicroseconds());
                         PeerInfo? allocatedPeer = allocation.Current;
                         if (Logger.IsTrace) Logger.Trace($"Allocated peer: {allocatedPeer}");
                         if (allocatedPeer is not null)
@@ -131,23 +172,40 @@ namespace Nethermind.Synchronization.ParallelSync
             }
         }
 
+        private Gauge CurrentProcessingThread =
+            Prometheus.Metrics.CreateGauge("sync_dispatcher_processing_threads", "Processing threads");
+
         private async Task DoDispatch(CancellationToken cancellationToken, PeerInfo? allocatedPeer, T request,
             SyncPeerAllocation allocation)
         {
+            Stopwatch sw = Stopwatch.StartNew();
             try
             {
                 await Downloader.Dispatch(allocatedPeer, request, cancellationToken);
+                DispatchLatency.WithLabels(Feed.GetType().Name, "success").Observe(sw.ElapsedMicroseconds());
             }
             catch (ConcurrencyLimitReachedException)
             {
                 if (Logger.IsDebug) Logger.Debug($"{request} - concurrency limit reached. Peer: {allocatedPeer}");
+                DispatchLatency.WithLabels(Feed.GetType().Name, "concurrency_limit_reached")
+                    .Observe(sw.ElapsedMicroseconds());
             }
             catch (OperationCanceledException)
             {
                 if (Logger.IsTrace) Logger.Debug($"{request} - Operation was canceled");
+                DispatchLatency.WithLabels(Feed.GetType().Name, "operation_cancelled")
+                    .Observe(sw.ElapsedMicroseconds());
+            }
+            catch (TimeoutException)
+            {
+                if (Logger.IsTrace) Logger.Debug($"{request} - Operation was timeout");
+                DispatchLatency.WithLabels(Feed.GetType().Name, "timeout")
+                    .Observe(sw.ElapsedMicroseconds());
             }
             catch (Exception e)
             {
+                DispatchLatency.WithLabels(Feed.GetType().Name, e.GetType().Name)
+                    .Observe(sw.ElapsedMicroseconds());
                 if (Logger.IsWarn) Logger.Warn($"Failure when executing request {e}");
             }
 
@@ -156,6 +214,7 @@ namespace Nethermind.Synchronization.ParallelSync
                 // Limit multithreaded feed concurrency. Note, this also blocks freeing the allocation, which is deliberate.
                 // otherwise, we will keep spawning requests without processing it fast enough, which consume memory.
                 await _concurrentProcessingSemaphore.WaitAsync(cancellationToken);
+                CurrentProcessingThread.Inc();
             }
 
             Free(allocation);
@@ -174,24 +233,31 @@ namespace Nethermind.Synchronization.ParallelSync
             {
                 if (Feed.IsMultiFeed)
                 {
+                    CurrentProcessingThread.Dec();
                     _concurrentProcessingSemaphore.Release();
                 }
             }
+
+            DoDispatchLatency.WithLabels(Feed.GetType().Name).Observe(sw.ElapsedMicroseconds());
         }
 
         private void DoHandleResponse(T request, PeerInfo? allocatedPeer = null)
         {
+            Stopwatch sw = Stopwatch.StartNew();
             try
             {
                 SyncResponseHandlingResult result = Feed.HandleResponse(request, allocatedPeer);
                 ReactToHandlingResult(request, result, allocatedPeer);
+                ResponseLatency.WithLabels(Feed.GetType().Name, "success").Observe(sw.ElapsedMicroseconds());
             }
             catch (ObjectDisposedException)
             {
                 if (Logger.IsInfo) Logger.Info("Ignoring sync response as the DB has already closed.");
+                ResponseLatency.WithLabels(Feed.GetType().Name, "object_disposed").Observe(sw.ElapsedMicroseconds());
             }
             catch (Exception e)
             {
+                ResponseLatency.WithLabels(Feed.GetType().Name, e.GetType().Name).Observe(sw.ElapsedMicroseconds());
                 // possibly clear the response and handle empty response batch here (to avoid missing parts)
                 // this practically corrupts sync
                 if (Logger.IsError) Logger.Error("Error when handling response", e);

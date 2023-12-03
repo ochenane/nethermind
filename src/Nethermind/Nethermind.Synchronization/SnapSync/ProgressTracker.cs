@@ -13,6 +13,7 @@ using Nethermind.Core.Crypto;
 using Nethermind.Db;
 using Nethermind.Logging;
 using Nethermind.State.Snap;
+using Prometheus;
 
 namespace Nethermind.Synchronization.SnapSync
 {
@@ -52,6 +53,21 @@ namespace Nethermind.Synchronization.SnapSync
         private ConcurrentQueue<ValueHash256> CodesToRetrieve { get; set; } = new();
         private ConcurrentQueue<AccountWithStorageStartingHash> AccountsToRefresh { get; set; } = new();
 
+        private static Gauge ActiveRequestProgress =
+            Prometheus.Metrics.CreateGauge("progress_tracker_account_range_progress", "Active account requests", "limit");
+        private static Gauge ActiveRequests =
+            Prometheus.Metrics.CreateGauge("progress_tracker_active_requests", "Active account requests", "type");
+        private static Counter AccountFinished =
+            Prometheus.Metrics.CreateCounter("progress_tracker_account_finished", "Account finished requests");
+        private static Counter NoRequest =
+            Prometheus.Metrics.CreateCounter("progress_tracker_no_request", "No request");
+
+        void ReportActiveRequests() {
+            ActiveRequests.WithLabels("refresh").Set(_activeAccRefreshRequests);
+            ActiveRequests.WithLabels("account").Set(_activeAccountRequests);
+            ActiveRequests.WithLabels("code").Set(_activeCodeRequests);
+            ActiveRequests.WithLabels("storage").Set(_activeStorageRequests);
+        }
 
         private readonly Pivot _pivot;
 
@@ -186,12 +202,15 @@ namespace Nethermind.Synchronization.SnapSync
 
             LogRequest(NO_REQUEST);
 
+            NoRequest.Inc();
+
             return (null, IsSnapGetRangesFinished());
         }
 
         private (SnapSyncBatch request, bool finished) DequeCodeRequest(SnapSyncBatch request)
         {
             Interlocked.Increment(ref _activeCodeRequests);
+            ReportActiveRequests();
 
             // TODO: optimize this
             List<ValueHash256> codesToQuery = new(CODES_BATCH_SIZE);
@@ -213,6 +232,7 @@ namespace Nethermind.Synchronization.SnapSync
             SnapSyncBatch request)
         {
             Interlocked.Increment(ref _activeStorageRequests);
+            ReportActiveRequests();
 
             // TODO: optimize this
             List<PathWithAccount> storagesToQuery = new(STORAGE_BATCH_SIZE);
@@ -253,6 +273,7 @@ namespace Nethermind.Synchronization.SnapSync
             AccountRangePartition partition, long blockNumber, SnapSyncBatch request)
         {
             Interlocked.Increment(ref _activeAccountRequests);
+            ReportActiveRequests();
 
             AccountRange range = new(
                 rootHash,
@@ -270,6 +291,7 @@ namespace Nethermind.Synchronization.SnapSync
         private (SnapSyncBatch request, bool finished) DequeAccountToRefresh(SnapSyncBatch request, Hash256 rootHash)
         {
             Interlocked.Increment(ref _activeAccRefreshRequests);
+            ReportActiveRequests();
 
             LogRequest($"AccountsToRefresh: {AccountsToRefresh.Count}");
 
@@ -307,6 +329,7 @@ namespace Nethermind.Synchronization.SnapSync
             EnqueueCodeHashes(codeHashes);
 
             Interlocked.Decrement(ref _activeCodeRequests);
+            ReportActiveRequests();
         }
 
         public void ReportAccountRefreshFinished(AccountsToRefreshRequest accountsToRefreshRequest = null)
@@ -320,6 +343,7 @@ namespace Nethermind.Synchronization.SnapSync
             }
 
             Interlocked.Decrement(ref _activeAccRefreshRequests);
+            ReportActiveRequests();
         }
 
         public void EnqueueAccountStorage(PathWithAccount pwa)
@@ -340,6 +364,7 @@ namespace Nethermind.Synchronization.SnapSync
             }
 
             Interlocked.Decrement(ref _activeStorageRequests);
+            ReportActiveRequests();
         }
 
         public void EnqueueStorageRange(StorageRange storageRange)
@@ -355,6 +380,7 @@ namespace Nethermind.Synchronization.SnapSync
             EnqueueStorageRange(storageRange);
 
             Interlocked.Decrement(ref _activeStorageRequests);
+            ReportActiveRequests();
         }
 
         public void ReportAccountRangePartitionFinished(in ValueHash256 hashLimit)
@@ -430,6 +456,10 @@ namespace Nethermind.Synchronization.SnapSync
                     int nextAccount = partiton.NextAccountPath.Bytes[0] * 256 + partiton.NextAccountPath.Bytes[1];
                     int startAccount = partiton.AccountPathStart.Bytes[0] * 256 + partiton.AccountPathStart.Bytes[1];
                     totalPathProgress += nextAccount - startAccount;
+
+                    int limit = partiton.AccountPathLimit.Bytes[0] * 256 + partiton.AccountPathLimit.Bytes[1];
+                    double progressP = (nextAccount - startAccount) / (double)(limit - startAccount);
+                    ActiveRequestProgress.WithLabels(partiton.AccountPathLimit.ToString()).Set(progressP);
                 }
 
                 float progress = (float)(totalPathProgress / (double)(256 * 256));
@@ -444,6 +474,11 @@ namespace Nethermind.Synchronization.SnapSync
                 _logger.Info(
                     $"Snap - ({reqType}, diff: {_pivot.Diff}) {moreAccountCount} - Requests Account: {_activeAccountRequests} | Storage: {_activeStorageRequests} | Code: {_activeCodeRequests} | Refresh: {_activeAccRefreshRequests} - Queues Slots: {NextSlotRange.Count} | Storages: {StoragesToRetrieve.Count} | Codes: {CodesToRetrieve.Count} | Refresh: {AccountsToRefresh.Count}");
             }
+        }
+
+        public BlockHeader GetPivotHeader()
+        {
+            return _pivot.GetPivotHeader();
         }
 
         private bool TryDequeNextSlotRange(out StorageRange item)

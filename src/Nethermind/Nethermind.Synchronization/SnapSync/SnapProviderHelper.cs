@@ -3,6 +3,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -14,11 +16,20 @@ using Nethermind.State;
 using Nethermind.State.Snap;
 using Nethermind.Trie;
 using Nethermind.Trie.Pruning;
+using Prometheus;
 
 namespace Nethermind.Synchronization.SnapSync
 {
     public static class SnapProviderHelper
     {
+
+        private static Histogram SnapProviderAddStorageRangeLatency =
+            Prometheus.Metrics.CreateHistogram("snap_provider_add_storage_range", "Snap add storage range", new HistogramConfiguration()
+            {
+                LabelNames = new []{"stage"},
+                Buckets = Histogram.PowersOfTenDividedBuckets(2, 6, 20)
+            });
+
         public static (AddRangeResult result, bool moreChildrenToRight, List<PathWithAccount> storageRoots, List<ValueHash256> codeHashes) AddAccountRange(
             StateTree tree,
             long blockNumber,
@@ -29,6 +40,7 @@ namespace Nethermind.Synchronization.SnapSync
             byte[][] proofs = null
         )
         {
+            Stopwatch sw = Stopwatch.StartNew();
             // TODO: Check the accounts boundaries and sorting
 
             ValueHash256 lastHash = accounts[^1].Path;
@@ -38,8 +50,12 @@ namespace Nethermind.Synchronization.SnapSync
 
             if (result != AddRangeResult.OK)
             {
+                SnapProviderAddStorageRangeLatency.WithLabels("main_failed_fill").Observe(sw.ElapsedMicroseconds());
                 return (result, true, null, null);
             }
+
+            SnapProviderAddStorageRangeLatency.WithLabels("main_fill").Observe(sw.ElapsedMicroseconds());
+            sw.Restart();
 
             List<PathWithAccount> accountsWithStorage = new();
             List<ValueHash256> codeHashes = new();
@@ -63,17 +79,27 @@ namespace Nethermind.Synchronization.SnapSync
                     Interlocked.Add(ref Metrics.SnapStateSynced, rlp.Bytes.Length);
                 }
             }
+            SnapProviderAddStorageRangeLatency.WithLabels("main_add").Observe(sw.ElapsedMicroseconds());
+            sw.Restart();
 
             tree.UpdateRootHash();
 
             if (tree.RootHash != expectedRootHash)
             {
+                SnapProviderAddStorageRangeLatency.WithLabels("main_failed_hash").Observe(sw.ElapsedMicroseconds());
                 return (AddRangeResult.DifferentRootHash, true, null, null);
             }
 
+            SnapProviderAddStorageRangeLatency.WithLabels("main_hash").Observe(sw.ElapsedMicroseconds());
+            sw.Restart();
             StitchBoundaries(sortedBoundaryList, tree.TrieStore);
+            SnapProviderAddStorageRangeLatency.WithLabels("main_stitch").Observe(sw.ElapsedMicroseconds());
+            sw.Restart();
 
             tree.Commit(blockNumber, skipRoot: true, WriteFlags.DisableWAL);
+
+            SnapProviderAddStorageRangeLatency.WithLabels("main_commit").Observe(sw.ElapsedMicroseconds());
+            sw.Restart();
 
             return (AddRangeResult.OK, moreChildrenToRight, accountsWithStorage, codeHashes);
         }
@@ -87,6 +113,7 @@ namespace Nethermind.Synchronization.SnapSync
             byte[][]? proofs = null
         )
         {
+            Stopwatch sw = Stopwatch.StartNew();
             // TODO: Check the slots boundaries and sorting
 
             ValueHash256 lastHash = slots[^1].Path;
@@ -96,8 +123,11 @@ namespace Nethermind.Synchronization.SnapSync
 
             if (result != AddRangeResult.OK)
             {
+                SnapProviderAddStorageRangeLatency.WithLabels("failed_fill").Observe(sw.ElapsedMicroseconds());
                 return (result, true);
             }
+            SnapProviderAddStorageRangeLatency.WithLabels("fill").Observe(sw.ElapsedMicroseconds());
+            sw.Restart();
 
             for (var index = 0; index < slots.Length; index++)
             {
@@ -106,16 +136,29 @@ namespace Nethermind.Synchronization.SnapSync
                 tree.Set(slot.Path, slot.SlotRlpValue, false);
             }
 
+            SnapProviderAddStorageRangeLatency.WithLabels("set").Observe(sw.ElapsedMicroseconds());
+            sw.Restart();
+
             tree.UpdateRootHash();
 
             if (tree.RootHash != expectedRootHash)
             {
+                SnapProviderAddStorageRangeLatency.WithLabels("failed_hash").Observe(sw.ElapsedMicroseconds());
+                sw.Restart();
                 return (AddRangeResult.DifferentRootHash, true);
             }
 
+            SnapProviderAddStorageRangeLatency.WithLabels("hash").Observe(sw.ElapsedMicroseconds());
+            sw.Restart();
+
             StitchBoundaries(sortedBoundaryList, tree.TrieStore);
 
+            SnapProviderAddStorageRangeLatency.WithLabels("stitch").Observe(sw.ElapsedMicroseconds());
+            sw.Restart();
+
             tree.Commit(blockNumber, writeFlags: WriteFlags.DisableWAL);
+
+            SnapProviderAddStorageRangeLatency.WithLabels("commit").Observe(sw.ElapsedMicroseconds());
 
             return (AddRangeResult.OK, moreChildrenToRight);
         }

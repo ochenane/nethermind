@@ -4,9 +4,13 @@
 using System;
 using System.Threading.Tasks;
 using DotNetty.Buffers;
+using System.Threading;
+using System.Threading.Channels;
+using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
 using Nethermind.Logging;
 using Nethermind.Network.P2P.Messages;
+using Prometheus;
 
 namespace Nethermind.Network.P2P
 {
@@ -16,6 +20,14 @@ namespace Nethermind.Network.P2P
         private readonly ILogger _logger;
         private IChannelHandlerContext _context;
         private TimeSpan _sendLatency;
+
+        private static readonly Histogram MessageSize = Prometheus.Metrics.CreateHistogram(
+            "packet_sender_message_size", "handle message latency",
+            new HistogramConfiguration()
+            {
+                LabelNames = new[] { "protocol", "packet_type", "client_type" },
+                Buckets = Histogram.PowersOfTenDividedBuckets(1, 8, 10)
+            });
 
         public PacketSender(IMessageSerializationService messageSerializationService, ILogManager logManager,
             TimeSpan sendLatency)
@@ -33,6 +45,7 @@ namespace Nethermind.Network.P2P
             }
 
             IByteBuffer buffer = _messageSerializationService.ZeroSerialize(message);
+            MessageSize.WithLabels(message.Protocol, message.PacketType.ToString(), "null").Observe(buffer.ReadableBytes);
             int length = buffer.ReadableBytes;
 
             // Running in background

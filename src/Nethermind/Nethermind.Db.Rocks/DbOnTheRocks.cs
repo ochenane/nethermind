@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Abstractions;
 using System.Reflection;
@@ -17,6 +18,7 @@ using Nethermind.Core.Extensions;
 using Nethermind.Db.Rocks.Config;
 using Nethermind.Db.Rocks.Statistics;
 using Nethermind.Logging;
+using Prometheus;
 using RocksDbSharp;
 using IWriteBatch = Nethermind.Core.IWriteBatch;
 
@@ -72,6 +74,21 @@ public class DbOnTheRocks : IDb, ITunableDb
 
     internal long _allocatedSpan = 0;
 
+    private Counter DbOnTheRocksWriteCount =
+        Prometheus.Metrics.CreateCounter("db_on_the_rocks_write_count", "time in set", "db", "flagtype");
+
+    private Counter.Child DbOnTheRocksWriteCountNORMAL;
+    private Counter.Child DbOnTheRocksWriteCountLP;
+    private Counter.Child DbOnTheRocksWriteCountLPNOWAL;
+    private Counter.Child DbOnTheRocksWriteCountNOWAL;
+
+    private Counter DbOnTheRocksReadTime =
+        Prometheus.Metrics.CreateCounter("db_on_the_rocks_read_time", "time in set", "db");
+    private Counter DbOnTheRocksReadCount =
+        Prometheus.Metrics.CreateCounter("db_on_the_rocks_read_count", "time in set", "db");
+    private Counter.Child DbOnTheRocksReadTimeC;
+    private Counter.Child DbOnTheRocksReadCountC;
+
     public DbOnTheRocks(
         string basePath,
         RocksDbSettings rocksDbSettings,
@@ -94,6 +111,14 @@ public class DbOnTheRocks : IDb, ITunableDb
         {
             ApplyOptions(_perTableDbConfig.AdditionalRocksDbOptions);
         }
+
+        DbOnTheRocksWriteCountLP = DbOnTheRocksWriteCount.WithLabels(_perTableDbConfig.GetPrefix(), "lp");
+        DbOnTheRocksWriteCountNORMAL = DbOnTheRocksWriteCount.WithLabels(_perTableDbConfig.GetPrefix(), "normal");
+        DbOnTheRocksWriteCountLPNOWAL = DbOnTheRocksWriteCount.WithLabels(_perTableDbConfig.GetPrefix(), "lpnowal");
+        DbOnTheRocksWriteCountNOWAL = DbOnTheRocksWriteCount.WithLabels(_perTableDbConfig.GetPrefix(), "wal");
+
+        DbOnTheRocksReadTimeC = DbOnTheRocksReadTime.WithLabels(_perTableDbConfig.GetPrefix());
+        DbOnTheRocksReadCountC = DbOnTheRocksReadCount.WithLabels(_perTableDbConfig.GetPrefix());
     }
 
     protected virtual RocksDb DoOpen(string path, (DbOptions Options, ColumnFamilies? Families) db)
@@ -153,14 +178,24 @@ public class DbOnTheRocks : IDb, ITunableDb
 
             if (dbConfig.EnableMetricsUpdater)
             {
-                _metricsUpdaters.Add(new DbMetricsUpdater(Name, DbOptions, db, null, dbConfig, _logger));
+                Console.Out.WriteLine($"Enabling metrics updater for {Name}");
+                _metricsUpdaters.Add(new DbMetricsUpdater(Name, DbOptions, db, null, dbConfig, _logger, () => DbOptions.GetStatisticsString()));
                 if (columnFamilies != null)
                 {
                     foreach (ColumnFamilies.Descriptor columnFamily in columnFamilies)
                     {
                         if (db.TryGetColumnFamily(columnFamily.Name, out ColumnFamilyHandle handle))
                         {
-                            _metricsUpdaters.Add(new DbMetricsUpdater(Name + "_" + columnFamily.Name, DbOptions, db, handle, dbConfig, _logger));
+                            if (columnFamily.Name == "default")
+                            {
+                                _metricsUpdaters.Add(new DbMetricsUpdater(Name + "_" + columnFamily.Name, DbOptions, db, handle, dbConfig, _logger,
+                                    () => DbOptions.GetStatisticsString()));
+                            }
+                            else
+                            {
+                                _metricsUpdaters.Add(new DbMetricsUpdater(Name + "_" + columnFamily.Name, DbOptions, db, handle, dbConfig, _logger,
+                                    () => columnFamily.Options.GetStatisticsString()));
+                            }
                         }
                     }
                 }
@@ -488,6 +523,7 @@ public class DbOnTheRocks : IDb, ITunableDb
 
         try
         {
+            var startTime = Stopwatch.GetTimestamp();
             if (_readAheadReadOptions != null && (flags & ReadFlags.HintReadAhead) != 0)
             {
                 if (!readaheadIterators.IsValueCreated)
@@ -503,7 +539,10 @@ public class DbOnTheRocks : IDb, ITunableDb
                 }
             }
 
-            return _db.Get(key, cf);
+            DbOnTheRocksReadCountC.Inc();
+            var res = _db.Get(key, cf);
+            DbOnTheRocksReadTimeC.Inc(Stopwatch.GetTimestamp() - startTime);
+            return res;
         }
         catch (RocksDbSharpException e)
         {
@@ -548,19 +587,23 @@ public class DbOnTheRocks : IDb, ITunableDb
     {
         if ((flags & WriteFlags.LowPriorityAndNoWAL) == WriteFlags.LowPriorityAndNoWAL)
         {
+            DbOnTheRocksWriteCountLPNOWAL.Inc();
             return _lowPriorityAndNoWalWrite;
         }
 
         if ((flags & WriteFlags.DisableWAL) == WriteFlags.DisableWAL)
         {
+            DbOnTheRocksWriteCountNOWAL.Inc();
             return _noWalWrite;
         }
 
         if ((flags & WriteFlags.LowPriority) == WriteFlags.LowPriority)
         {
+            DbOnTheRocksWriteCountLP.Inc();
             return _lowPriorityWriteOptions;
         }
 
+        DbOnTheRocksWriteCountNORMAL.Inc();
         return WriteOptions;
     }
 
@@ -851,6 +894,14 @@ public class DbOnTheRocks : IDb, ITunableDb
             _reusableWriteBatch = batch;
         }
 
+        private static Histogram DbOnTheRocksBatchSize =
+            Prometheus.Metrics.CreateHistogram("db_on_the_rocks_batch_size", "The batch size", new HistogramConfiguration()
+            {
+                Buckets = Histogram.ExponentialBuckets(1, 2, 15)
+            });
+        private static Counter DbOnTheRocksBatchDispose =
+            Prometheus.Metrics.CreateCounter("db_on_the_rocks_batch_dispose", "yatch dispose");
+
         public void Dispose()
         {
             if (_dbOnTheRocks._isDisposed)
@@ -866,9 +917,11 @@ public class DbOnTheRocks : IDb, ITunableDb
 
             try
             {
+                Stopwatch sw = Stopwatch.StartNew();
                 _dbOnTheRocks._db.Write(_rocksBatch, _dbOnTheRocks.WriteFlagsToWriteOptions(_writeFlags));
                 _dbOnTheRocks._currentBatches.TryRemove(this);
                 ReturnWriteBatch(_rocksBatch);
+                DbOnTheRocksBatchDispose.Inc(sw.ElapsedMicroseconds());
             }
             catch (RocksDbSharpException e)
             {

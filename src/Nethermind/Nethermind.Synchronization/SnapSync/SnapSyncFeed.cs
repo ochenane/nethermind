@@ -8,11 +8,15 @@ using System.Threading.Tasks;
 using Nethermind.Logging;
 using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.Peers;
+using Prometheus;
 
 namespace Nethermind.Synchronization.SnapSync
 {
     public class SnapSyncFeed : SyncFeed<SnapSyncBatch?>, IDisposable
     {
+        private Counter AddRangeResultCount =
+            Prometheus.Metrics.CreateCounter("snap_sync_feed_add_range_result_count", "ADd range", "result");
+
         private readonly object _syncLock = new();
 
         private const int AllowedInvalidResponses = 5;
@@ -71,10 +75,12 @@ namespace Nethermind.Synchronization.SnapSync
             if (batch.AccountRangeResponse is not null)
             {
                 result = _snapProvider.AddAccountRange(batch.AccountRangeRequest, batch.AccountRangeResponse);
+                AddRangeResultCount.WithLabels(result.ToString()).Inc();
             }
             else if (batch.StorageRangeResponse is not null)
             {
                 result = _snapProvider.AddStorageRange(batch.StorageRangeRequest, batch.StorageRangeResponse);
+                AddRangeResultCount.WithLabels(result.ToString()).Inc();
             }
             else if (batch.CodesResponse is not null)
             {

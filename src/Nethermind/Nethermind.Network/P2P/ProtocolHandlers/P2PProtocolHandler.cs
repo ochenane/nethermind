@@ -265,6 +265,8 @@ public class P2PProtocolHandler : ProtocolHandlerBase, IPingSender, IP2PProtocol
         };
 
         ProtocolInitialized?.Invoke(this, eventArgs);
+
+        (Session as Session).HelloReceived = true;
     }
 
     [SuppressMessage("ReSharper", "HeuristicUnreachableCode")]

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using Nethermind.Blockchain.Synchronization;
 using Nethermind.Core;
+using Nethermind.Stats.Model;
 
 namespace Nethermind.Synchronization.Peers;
 
@@ -19,5 +20,5 @@ public interface IPeerDifficultyRefreshPool
 
     void UpdateSyncPeerHeadIfHeaderIsBetter(ISyncPeer syncPeer, BlockHeader header);
 
-    void ReportRefreshFailed(ISyncPeer syncPeer, string reason, Exception? exception = null);
+    void ReportRefreshFailed(ISyncPeer syncPeer, string reason, Exception? exception = null, DisconnectReason? disconnectReason = null);
 }

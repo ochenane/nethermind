@@ -56,6 +56,7 @@ public static class Program
 
     public static void Main(string[] args)
     {
+        Prometheus.ExemplarBehavior.NoExemplars();
 #if !DEBUG
         ResourceLeakDetector.Level = ResourceLeakDetector.DetectionLevel.Disabled;
 #endif

@@ -16,6 +16,7 @@ using Nethermind.Serialization.Json;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Prometheus;
 
 #nullable enable
 namespace Nethermind.JsonRpc
@@ -228,6 +229,13 @@ namespace Nethermind.JsonRpc
             if (_logger.IsDebug) _logger.Debug($"  {requests.Count} requests handled in {stopwatch.Elapsed.TotalMilliseconds}ms");
         }
 
+        private Histogram JsonRpcRequestLatency = Prometheus.Metrics.CreateHistogram(
+            "json_rpc_processor_handle_request_latency", "Handle request latency",
+            new HistogramConfiguration()
+            {
+                LabelNames = new[] { "method" }, Buckets = Histogram.PowersOfTenDividedBuckets(3, 8, 20)
+            });
+
         private async Task<JsonRpcResult.Entry> HandleSingleRequest(JsonRpcRequest request, JsonRpcContext context)
         {
             Metrics.JsonRpcRequests++;
@@ -252,6 +260,7 @@ namespace Nethermind.JsonRpc
             }
 
             stopwatch.Stop();
+            JsonRpcRequestLatency.WithLabels(request.Method).Observe(stopwatch.ElapsedMicroseconds());
             if (_logger.IsDebug) _logger.Debug($"  {request} handled in {stopwatch.Elapsed.TotalMilliseconds}ms");
 
             if (_logger.IsDebug) _logger.Debug($"  {request} handled in {stopwatch.Elapsed.TotalMilliseconds}ms");

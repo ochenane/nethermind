@@ -14,6 +14,7 @@ using System.Threading;
 using Nethermind.Core;
 using Nethermind.Core.Attributes;
 using Nethermind.Core.Collections;
+using Nethermind.Core.Memory;
 using Nethermind.Monitoring.Config;
 using Prometheus;
 
@@ -206,6 +207,8 @@ namespace Nethermind.Monitoring.Metrics
             {
                 UpdateMetrics(metricType);
             }
+
+            MemoryPressureHelper.UpdateMetrics();
         }
 
         public void AddMetricsUpdateAction(Action callback)

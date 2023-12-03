@@ -69,7 +69,7 @@ namespace Nethermind.Stats
         public SyncPeerNodeDetails LesNodeDetails { get; private set; }
 
         public CompatibilityValidationType? FailedCompatibilityValidation { get; set; }
-
+        public DisconnectReason? LastLocalDisconnect { get; private set; }
         public Node Node { get; }
 
         private void Increment(NodeStatsEventType nodeStatsEventType)
@@ -116,6 +116,8 @@ namespace Nethermind.Stats
                 {
                     UpdateDelayConnectDeadline(nowUTC, param.ReconnectDelay, NodeStatsEventType.LocalDisconnectDelay);
                 }
+
+                LastLocalDisconnect = disconnectReason;
             }
             else if (disconnectType == DisconnectType.Remote)
             {

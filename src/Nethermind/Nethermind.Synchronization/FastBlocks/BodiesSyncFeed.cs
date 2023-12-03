@@ -16,6 +16,7 @@ using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.Peers;
 using Nethermind.Synchronization.Reporting;
 using Nethermind.Synchronization.SyncLimits;
+using Prometheus;
 
 namespace Nethermind.Synchronization.FastBlocks
 {
@@ -162,7 +163,7 @@ namespace Nethermind.Synchronization.FastBlocks
                     return SyncResponseHandlingResult.InternalError;
                 }
 
-                int added = InsertBodies(batch);
+                int added = InsertBodies(batch, peer);
                 return added == 0
                     ? SyncResponseHandlingResult.NoProgress
                     : SyncResponseHandlingResult.OK;
@@ -202,7 +203,10 @@ namespace Nethermind.Synchronization.FastBlocks
             return block is not null;
         }
 
-        private int InsertBodies(BodiesSyncBatch batch)
+        private Counter BodiesProcessStatus =
+            Prometheus.Metrics.CreateCounter("bodies_sync_feed_status", "the status", "client", "status");
+
+        private int InsertBodies(BodiesSyncBatch batch, PeerInfo peer)
         {
             bool hasBreachedProtocol = false;
             int validResponsesCount = 0;
@@ -227,6 +231,7 @@ namespace Nethermind.Synchronization.FastBlocks
                     bool isValid = !hasBreachedProtocol && TryPrepareBlock(blockInfo, body, out block);
                     if (isValid)
                     {
+                        BodiesProcessStatus.WithLabels((peer?.PeerClientType.ToString() ?? "unknown"), "ok").Inc();
                         validResponsesCount++;
                         InsertOneBlock(block!);
                     }
@@ -240,11 +245,13 @@ namespace Nethermind.Synchronization.FastBlocks
                             _syncPeerPool.ReportBreachOfProtocol(batch.ResponseSourcePeer, DisconnectReason.InvalidTxOrUncle, "invalid tx or uncles root");
                         }
 
+                        BodiesProcessStatus.WithLabels((peer?.PeerClientType.ToString() ?? "unknown"), "invalid").Inc();
                         _syncStatusList.MarkPending(blockInfo);
                     }
                 }
                 else
                 {
+                    BodiesProcessStatus.WithLabels((peer?.PeerClientType.ToString() ?? "unknown"), "skipped").Inc();
                     _syncStatusList.MarkPending(blockInfo);
                 }
             }
