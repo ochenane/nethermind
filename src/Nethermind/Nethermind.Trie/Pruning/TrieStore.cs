@@ -22,8 +22,48 @@ namespace Nethermind.Trie.Pruning
     /// </summary>
     public class TrieStore : ITrieStore
     {
-        public record PruneKey(Hash256? Address, TreePath Path, ValueHash256 Keccak)
+        public struct PruneKey
         {
+            private byte[] storagePath;
+            public PruneKey(Hash256? address, TreePath path, ValueHash256 keccak)
+            {
+                storagePath = GetNodeStoragePath(address, path, keccak);
+            }
+
+            public override bool Equals(object? obj)
+            {
+                if (obj is PruneKey otherKey)
+                {
+                    return Bytes.EqualityComparer.Equals(storagePath, otherKey.storagePath);
+                }
+
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return storagePath.GetSimplifiedHashCode();
+            }
+
+            public static bool operator ==(PruneKey? a, PruneKey? b)
+            {
+                if (a is null)
+                {
+                    return b is null;
+                }
+
+                if (b is null)
+                {
+                    return false;
+                }
+
+                return Bytes.EqualityComparer.Equals(a.Value.storagePath, b.Value.storagePath);
+            }
+
+            public static bool operator !=(PruneKey? a, PruneKey? b)
+            {
+                return !(a == b);
+            }
         }
 
         private class DirtyNodesCache
