@@ -346,13 +346,12 @@ namespace Nethermind.Trie.Pruning
 
             if (address != null)
             {
+                // If address is null, we assume all are zero. So account tree should be in one place.
                 address.Bytes[..4].CopyTo(pathBytes.AsSpan());
-                // Node, this assume Path is zeroed
-                path.Path.BytesAsSpan[..4].CopyTo(pathBytes.AsSpan()[4..]);
-            } else {
-                // I guess we don't actually need 8 byte. 6 byte should be ok enough.
-                path.Path.BytesAsSpan[..8].CopyTo(pathBytes.AsSpan()[4..]);
             }
+
+            // Node, this assume Path is zeroed
+            path.Path.BytesAsSpan[..4].CopyTo(pathBytes.AsSpan()[4..]);
             keccak.Bytes.CopyTo(pathBytes.AsSpan()[8..]);
 
             return pathBytes;
