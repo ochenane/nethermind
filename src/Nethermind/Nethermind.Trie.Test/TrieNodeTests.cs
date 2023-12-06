@@ -62,7 +62,7 @@ namespace Nethermind.Trie.Test
         [Test]
         public void Forward_read_flags_on_resolve()
         {
-            ISmallTrieNodeResolver resolver = Substitute.For<ISmallTrieNodeResolver>();
+            ITrieNodeResolver resolver = Substitute.For<ITrieNodeResolver>();
             resolver.LoadRlp(TreePath.Empty, TestItem.KeccakA, ReadFlags.HintReadAhead).Returns((byte[])null);
             TrieNode trieNode = new(NodeType.Unknown, TestItem.KeccakA);
             try
@@ -808,7 +808,7 @@ namespace Nethermind.Trie.Test
             trieNode.SetChild(4, child);
 
             trieNode.PrunePersistedRecursively(1);
-            var trieStore = Substitute.For<ISmallTrieNodeResolver>();
+            var trieStore = Substitute.For<ITrieNodeResolver>();
             trieStore.FindCachedOrUnknown(Arg.Any<TreePath>(), Arg.Any<Hash256>()).Returns(child);
             trieNode.GetChild(trieStore, TreePath.Empty, 0).Should().Be(child);
             trieNode.GetChild(trieStore, TreePath.Empty, 1).Should().BeNull();
@@ -823,7 +823,7 @@ namespace Nethermind.Trie.Test
             trieNode.SetChild(0, child);
 
             trieNode.PrunePersistedRecursively(1);
-            var trieStore = Substitute.For<ISmallTrieNodeResolver>();
+            var trieStore = Substitute.For<ITrieNodeResolver>();
             trieStore.FindCachedOrUnknown(Arg.Any<TreePath>(), Arg.Any<Hash256>()).Returns(child);
             trieNode.GetChild(trieStore, TreePath.Empty, 0).Should().Be(child);
         }
@@ -840,7 +840,7 @@ namespace Nethermind.Trie.Test
             trieNode.SetChild(0, child);
             trieNode.Seal();
 
-            ISmallTrieNodeResolver trieStore = Substitute.For<ISmallTrieNodeResolver>();
+            ITrieNodeResolver trieStore = Substitute.For<ITrieNodeResolver>();
             trieStore.LoadRlp(Arg.Any<TreePath>(), Arg.Any<Hash256>()).Throws(new TrieException());
             child.ResolveKey(trieStore, TreePath.Empty, false);
             child.IsPersisted = true;
@@ -861,7 +861,7 @@ namespace Nethermind.Trie.Test
             }
 
             trieNode.Seal();
-            trieNode.ResolveKey(Substitute.For<ISmallTrieNodeResolver>(), TreePath.Empty, false);
+            trieNode.ResolveKey(Substitute.For<ITrieNodeResolver>(), TreePath.Empty, false);
 
             void CheckChildren()
             {

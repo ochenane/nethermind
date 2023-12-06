@@ -32,7 +32,7 @@ namespace Nethermind.Store.Test
             TrieNode node = new(NodeType.Branch);
             node.SetChild(0, new TrieNode(NodeType.Leaf, TestItem.KeccakA));
             node.SetChild(1, new TrieNode(NodeType.Leaf, TestItem.KeccakB));
-            ISmallTrieNodeResolver tree = BuildATreeFromNode(node);
+            ITrieNodeResolver tree = BuildATreeFromNode(node);
             TrieNode decoded = new(NodeType.Unknown, node.Keccak);
             decoded.ResolveNode(tree, TreePath.Empty);
             decoded.RlpEncode(tree, TreePath.Empty);
@@ -44,7 +44,7 @@ namespace Nethermind.Store.Test
             TrieNode node = new(NodeType.Branch);
             node.SetChild(0, new TrieNode(NodeType.Leaf, TestItem.KeccakA));
             node.SetChild(1, new TrieNode(NodeType.Leaf, TestItem.KeccakB));
-            ISmallTrieNodeResolver tree = BuildATreeFromNode(node);
+            ITrieNodeResolver tree = BuildATreeFromNode(node);
             TrieNode decoded = new(NodeType.Unknown, node.Keccak);
             decoded.ResolveNode(tree, TreePath.Empty);
             decoded.RlpEncode(tree, TreePath.Empty);
@@ -56,7 +56,7 @@ namespace Nethermind.Store.Test
             TrieNode node = new(NodeType.Branch);
             node.SetChild(0, new TrieNode(NodeType.Leaf, TestItem.KeccakA));
             node.SetChild(1, new TrieNode(NodeType.Leaf, TestItem.KeccakB));
-            ISmallTrieNodeResolver tree = BuildATreeFromNode(node);
+            ITrieNodeResolver tree = BuildATreeFromNode(node);
             TrieNode decoded = new(NodeType.Unknown, node.Keccak);
             decoded.ResolveNode(tree, TreePath.Empty);
             TrieNode child0 = decoded.GetChild(tree, TreePath.Empty, 0);
@@ -69,7 +69,7 @@ namespace Nethermind.Store.Test
             TrieNode node = new(NodeType.Branch);
             node.SetChild(0, new TrieNode(NodeType.Leaf, TestItem.KeccakA));
             node.SetChild(1, new TrieNode(NodeType.Leaf, TestItem.KeccakB));
-            ISmallTrieNodeResolver tree = BuildATreeFromNode(node);
+            ITrieNodeResolver tree = BuildATreeFromNode(node);
             TrieNode decoded = new(NodeType.Unknown, node.Keccak);
             decoded.ResolveNode(tree, TreePath.Empty);
             TrieNode child = decoded.GetChild(tree, TreePath.Empty, 3);
@@ -82,7 +82,7 @@ namespace Nethermind.Store.Test
             TrieNode node = new(NodeType.Branch);
             node.SetChild(0, new TrieNode(NodeType.Leaf, TestItem.KeccakA));
             node.SetChild(1, new TrieNode(NodeType.Leaf, TestItem.KeccakB));
-            ISmallTrieNodeResolver tree = BuildATreeFromNode(node);
+            ITrieNodeResolver tree = BuildATreeFromNode(node);
             TrieNode decoded = new(NodeType.Unknown, node.Keccak);
             decoded.ResolveNode(tree, TreePath.Empty);
             decoded = decoded.Clone();
@@ -96,7 +96,7 @@ namespace Nethermind.Store.Test
             TrieNode node = new(NodeType.Branch);
             node.SetChild(0, new TrieNode(NodeType.Leaf, TestItem.KeccakA));
             node.SetChild(1, new TrieNode(NodeType.Leaf, TestItem.KeccakB));
-            ISmallTrieNodeResolver tree = BuildATreeFromNode(node);
+            ITrieNodeResolver tree = BuildATreeFromNode(node);
             TrieNode decoded = new(NodeType.Unknown, node.Keccak);
             decoded.ResolveNode(tree, TreePath.Empty);
             decoded = decoded.Clone();
@@ -111,7 +111,7 @@ namespace Nethermind.Store.Test
             TrieNode node = new(NodeType.Branch);
             node.SetChild(0, new TrieNode(NodeType.Leaf, TestItem.KeccakA));
             node.SetChild(1, new TrieNode(NodeType.Leaf, TestItem.KeccakB));
-            ISmallTrieNodeResolver tree = BuildATreeFromNode(node);
+            ITrieNodeResolver tree = BuildATreeFromNode(node);
             TrieNode decoded = new(NodeType.Unknown, node.Keccak);
             decoded.ResolveNode(tree, TreePath.Empty);
             decoded = decoded.Clone();
@@ -125,13 +125,13 @@ namespace Nethermind.Store.Test
         {
             TrieNode node = new(NodeType.Branch);
             node.SetChild(0, new TrieNode(NodeType.Leaf, TestItem.KeccakA));
-            ISmallTrieNodeResolver tree = BuildATreeFromNode(node);
+            ITrieNodeResolver tree = BuildATreeFromNode(node);
             TrieNode decoded = new(NodeType.Unknown, node.Keccak);
             decoded.ResolveNode(tree, TreePath.Empty);
             decoded.RlpEncode(tree, TreePath.Empty);
         }
 
-        private static ISmallTrieNodeResolver BuildATreeFromNode(TrieNode node)
+        private static ITrieNodeResolver BuildATreeFromNode(TrieNode node)
         {
             TrieNode.AllowBranchValues = true;
             CappedArray<byte> rlp = node.RlpEncode(null, TreePath.Empty);

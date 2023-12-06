@@ -1,13 +1,12 @@
 // SPDX-FileCopyrightText: 2022 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
-using System.Reflection.Metadata;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 
 namespace Nethermind.Trie.Pruning
 {
-    public interface ISmallTrieNodeResolver
+    public interface ITrieNodeResolver
     {
         /// <summary>
         /// Returns a cached and resolved <see cref="TrieNode"/> or a <see cref="TrieNode"/> with Unknown type
@@ -25,14 +24,6 @@ namespace Nethermind.Trie.Pruning
         /// <returns></returns>
         byte[]? LoadRlp(TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None);
 
-        ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256? address);
-    }
-
-    // TODO: scope out storage root
-    public interface ITrieNodeResolver
-    {
-        // Transitionary item
-        TrieNode FindCachedOrUnknown(Hash256? address, TreePath path, Hash256 hash);
-        byte[]? LoadRlp(Hash256? address, TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None);
+        ITrieNodeResolver GetStorageTrieNodeResolver(Hash256? address);
     }
 }

@@ -1115,7 +1115,7 @@ namespace Nethermind.Trie
                 }
             }
 
-            ISmallTrieNodeResolver resolver = TrieStore;
+            ITrieNodeResolver resolver = TrieStore;
             if (visitor.IsFullDbScan)
             {
                 resolver = new TrieNodeResolverWithReadFlags(TrieStore, ReadFlags.HintCacheMiss);

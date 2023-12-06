@@ -7,12 +7,12 @@ using Nethermind.Trie.Pruning;
 
 namespace Nethermind.Trie;
 
-public class TrieNodeResolverWithReadFlags : ISmallTrieNodeResolver
+public class TrieNodeResolverWithReadFlags : ITrieNodeResolver
 {
-    private readonly ISmallTrieStore _baseResolver;
+    private readonly ITrieNodeResolver _baseResolver;
     private readonly ReadFlags _defaultFlags;
 
-    public TrieNodeResolverWithReadFlags(ISmallTrieStore baseResolver, ReadFlags defaultFlags)
+    public TrieNodeResolverWithReadFlags(ITrieNodeResolver baseResolver, ReadFlags defaultFlags)
     {
         _baseResolver = baseResolver;
         _defaultFlags = defaultFlags;
@@ -33,7 +33,7 @@ public class TrieNodeResolverWithReadFlags : ISmallTrieNodeResolver
         return _baseResolver.LoadRlp(treePath, hash, _defaultFlags);
     }
 
-    public ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256 address)
+    public ITrieNodeResolver GetStorageTrieNodeResolver(Hash256 address)
     {
         return _baseResolver.GetStorageTrieNodeResolver(address);
     }

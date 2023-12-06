@@ -54,12 +54,12 @@ public class BatchedTrieVisitor
     private long _currentPointer;
     private long _readAheadThreshold;
 
-    private readonly ISmallTrieNodeResolver _resolver;
+    private readonly ITrieNodeResolver _resolver;
     private readonly ITreeVisitor _visitor;
 
     public BatchedTrieVisitor(
         ITreeVisitor visitor,
-        ISmallTrieNodeResolver resolver,
+        ITrieNodeResolver resolver,
         VisitingOptions visitingOptions)
     {
         _visitor = visitor;
@@ -192,7 +192,7 @@ public class BatchedTrieVisitor
                 {
                     if (!theStack.TryPop(out Job item)) break;
 
-                    ISmallTrieNodeResolver resolver = _resolver;
+                    ITrieNodeResolver resolver = _resolver;
                     if (item.Key.Item1 != null)
                     {
                         resolver = resolver.GetStorageTrieNodeResolver(item.Key.Item1);
@@ -330,7 +330,7 @@ public class BatchedTrieVisitor
                 try
                 {
                     Hash256 theKeccak = nodeToResolve.Keccak;
-                    ISmallTrieNodeResolver resolver = _resolver;
+                    ITrieNodeResolver resolver = _resolver;
                     if (address != null) resolver = resolver.GetStorageTrieNodeResolver(address);
                     nodeToResolve.ResolveNode(resolver, path, flags);
                     nodeToResolve.Keccak = theKeccak; // The resolve may set a key which clear the keccak

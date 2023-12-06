@@ -32,7 +32,7 @@ namespace Nethermind.Trie
         /// <exception cref="TrieException"></exception>
         internal void AcceptResolvedNode(
             ITreeVisitor visitor,
-            ISmallTrieNodeResolver nodeResolver,
+            ITrieNodeResolver nodeResolver,
             Hash256? address,
             TreePath path,
             SmallTrieVisitContext trieVisitContext,
@@ -132,7 +132,7 @@ namespace Nethermind.Trie
             }
         }
 
-        internal void Accept(ITreeVisitor visitor, ISmallTrieNodeResolver nodeResolver, TreePath path, TrieVisitContext trieVisitContext)
+        internal void Accept(ITreeVisitor visitor, ITrieNodeResolver nodeResolver, TreePath path, TrieVisitContext trieVisitContext)
         {
             try
             {
@@ -151,7 +151,7 @@ namespace Nethermind.Trie
                 case NodeType.Branch:
                     {
                         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                        void VisitChild(int i, TrieNode? child, ISmallTrieNodeResolver resolver, ITreeVisitor v, TrieVisitContext context)
+                        void VisitChild(int i, TrieNode? child, ITrieNodeResolver resolver, ITreeVisitor v, TrieVisitContext context)
                         {
                             if (child is not null)
                             {
@@ -170,7 +170,7 @@ namespace Nethermind.Trie
                         }
 
                         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                        void VisitSingleThread(ITreeVisitor treeVisitor, ISmallTrieNodeResolver trieNodeResolver, TrieVisitContext visitContext)
+                        void VisitSingleThread(ITreeVisitor treeVisitor, ITrieNodeResolver trieNodeResolver, TrieVisitContext visitContext)
                         {
                             // single threaded route
                             for (int i = 0; i < BranchesCount; i++)
@@ -180,7 +180,7 @@ namespace Nethermind.Trie
                         }
 
                         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                        void VisitMultiThread(ITreeVisitor treeVisitor, ISmallTrieNodeResolver trieNodeResolver, TrieVisitContext visitContext, TrieNode?[] children)
+                        void VisitMultiThread(ITreeVisitor treeVisitor, ITrieNodeResolver trieNodeResolver, TrieVisitContext visitContext, TrieNode?[] children)
                         {
                             // multithreaded route
                             Parallel.For(0, BranchesCount, i =>

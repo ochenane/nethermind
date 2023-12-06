@@ -7,7 +7,7 @@ using Nethermind.Core.Crypto;
 
 namespace Nethermind.Trie.Pruning
 {
-    public interface ISmallTrieStore : ISmallTrieNodeResolver, IDisposable
+    public interface ISmallTrieStore : ITrieNodeResolver, IDisposable
     {
         void CommitNode(long blockNumber, NodeCommitInfo nodeCommitInfo, WriteFlags writeFlags = WriteFlags.None);
 
@@ -18,7 +18,7 @@ namespace Nethermind.Trie.Pruning
         IKeyValueStore AsKeyValueStore();
     }
 
-    public interface ITrieStore : ITrieNodeResolver, IDisposable
+    public interface ITrieStore : IDisposable
     {
         void CommitNode(long blockNumber, Hash256? address, NodeCommitInfo nodeCommitInfo, WriteFlags writeFlags = WriteFlags.None);
 
@@ -32,5 +32,8 @@ namespace Nethermind.Trie.Pruning
 
         IKeyValueStore AsKeyValueStore(Hash256? address);
         ISmallTrieStore GetTrieStore(Hash256? address);
+
+        TrieNode FindCachedOrUnknown(Hash256? address, TreePath path, Hash256 hash);
+        byte[]? LoadRlp(Hash256? address, TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None);
     }
 }

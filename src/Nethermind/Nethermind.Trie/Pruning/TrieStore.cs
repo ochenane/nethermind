@@ -999,7 +999,7 @@ namespace Nethermind.Trie.Pruning
                 return _trieStoreImplementation.LoadRlp(null, path, hash, flags);
             }
 
-            public ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256? address)
+            public ITrieNodeResolver GetStorageTrieNodeResolver(Hash256? address)
             {
                 return GetStorageTrieStore(address);
             }
@@ -1063,7 +1063,7 @@ namespace Nethermind.Trie.Pruning
                 return _trieStoreImplementation.LoadRlp(_address, path, hash, flags);
             }
 
-            public ISmallTrieNodeResolver GetStorageTrieNodeResolver(Hash256? address)
+            public ITrieNodeResolver GetStorageTrieNodeResolver(Hash256? address)
             {
                 throw new Exception("Only two level trie");
             }

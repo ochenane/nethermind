@@ -271,7 +271,7 @@ namespace Nethermind.Trie
         /// <summary>
         /// Highly optimized
         /// </summary>
-        public void ResolveNode(ISmallTrieNodeResolver tree, TreePath path, ReadFlags readFlags = ReadFlags.None, ICappedArrayPool? bufferPool = null)
+        public void ResolveNode(ITrieNodeResolver tree, TreePath path, ReadFlags readFlags = ReadFlags.None, ICappedArrayPool? bufferPool = null)
         {
             try
             {
@@ -352,7 +352,7 @@ namespace Nethermind.Trie
             }
         }
 
-        public void ResolveKey(ISmallTrieNodeResolver tree, TreePath path, bool isRoot, ICappedArrayPool? bufferPool = null)
+        public void ResolveKey(ITrieNodeResolver tree, TreePath path, bool isRoot, ICappedArrayPool? bufferPool = null)
         {
             if (Keccak is not null)
             {
@@ -364,7 +364,7 @@ namespace Nethermind.Trie
             Keccak = GenerateKey(tree, path, isRoot, bufferPool);
         }
 
-        public Hash256? GenerateKey(ISmallTrieNodeResolver tree, TreePath path, bool isRoot, ICappedArrayPool? bufferPool = null)
+        public Hash256? GenerateKey(ITrieNodeResolver tree, TreePath path, bool isRoot, ICappedArrayPool? bufferPool = null)
         {
             Hash256? keccak = Keccak;
             if (keccak is not null)
@@ -395,7 +395,7 @@ namespace Nethermind.Trie
             return null;
         }
 
-        public bool TryResolveStorageRootHash(ISmallTrieNodeResolver resolver, out Hash256? storageRootHash)
+        public bool TryResolveStorageRootHash(ITrieNodeResolver resolver, out Hash256? storageRootHash)
         {
             storageRootHash = null;
 
@@ -418,7 +418,7 @@ namespace Nethermind.Trie
             return false;
         }
 
-        internal CappedArray<byte> RlpEncode(ISmallTrieNodeResolver tree, TreePath path, ICappedArrayPool? bufferPool = null)
+        internal CappedArray<byte> RlpEncode(ITrieNodeResolver tree, TreePath path, ICappedArrayPool? bufferPool = null)
         {
             CappedArray<byte> rlp = _nodeDecoder.Encode(tree, path, this, bufferPool);
             // just included here to improve the class reading
@@ -535,7 +535,7 @@ namespace Nethermind.Trie
             return childPath;
         }
 
-        public TrieNode? GetChild(ISmallTrieNodeResolver tree, TreePath currentPath, int childIndex)
+        public TrieNode? GetChild(ITrieNodeResolver tree, TreePath currentPath, int childIndex)
         {
             /* extensions store value before the child while branches store children before the value
              * so just to treat them in the same way we update index on extensions
@@ -732,7 +732,7 @@ namespace Nethermind.Trie
             Action<TrieNode, Hash256?, TreePath> action,
             Hash256? storageAddress,
             TreePath currentPath,
-            ISmallTrieNodeResolver resolver,
+            ITrieNodeResolver resolver,
             bool skipPersisted,
             ILogger logger,
             bool resolveStorageRoot = true)
@@ -830,7 +830,7 @@ namespace Nethermind.Trie
 
         #region private
 
-        private bool TryResolveStorageRoot(ISmallTrieNodeResolver resolver, TreePath currentPath, out TrieNode? storageRoot)
+        private bool TryResolveStorageRoot(ITrieNodeResolver resolver, TreePath currentPath, out TrieNode? storageRoot)
         {
             bool hasStorage = false;
             storageRoot = _storageRoot;
@@ -903,7 +903,7 @@ namespace Nethermind.Trie
             }
         }
 
-        private object? ResolveChild(ISmallTrieNodeResolver tree, TreePath currentPath, int i)
+        private object? ResolveChild(ITrieNodeResolver tree, TreePath currentPath, int i)
         {
             object? childOrRef;
             if (_rlpStream is null)
