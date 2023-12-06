@@ -57,8 +57,6 @@ namespace Nethermind.Trie
 
         public TrieNode? RootRef { get; set; }
 
-        public bool IsStorage => TrieType == TrieType.Storage;
-
         /// <summary>
         /// Only used in EthereumTests
         /// </summary>
@@ -105,7 +103,7 @@ namespace Nethermind.Trie
             ILogManager logManager,
             ICappedArrayPool? bufferPool = null)
             : this(
-                new TrieStore(keyValueStore, logManager).RootStore,
+                new TrieStore(keyValueStore, logManager).GetTrieStore(null),
                 rootHash,
                 parallelBranches,
                 allowCommits,

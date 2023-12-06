@@ -47,7 +47,7 @@ namespace Nethermind.Trie.Pruning
         public IKeyValueStore AsKeyValueStore(Hash256? address) => new ReadOnlyValueStore(_trieStore.AsKeyValueStore(address));
         public ISmallTrieStore GetTrieStore(Hash256? address)
         {
-            return _trieStore.GetTrieStore(address);
+            return new ReadOnlyStorageTrieStore(this, address);
         }
 
         public void Dispose() { }
@@ -64,6 +64,55 @@ namespace Nethermind.Trie.Pruning
             public byte[]? Get(ReadOnlySpan<byte> key, ReadFlags flags = ReadFlags.None) => _keyValueStore.Get(key, flags);
 
             public void Set(ReadOnlySpan<byte> key, byte[]? value, WriteFlags flags = WriteFlags.None) { }
+        }
+
+        public class ReadOnlyStorageTrieStore : ISmallTrieStore
+        {
+            private ReadOnlyTrieStore _trieStoreImplementation;
+            private readonly Hash256? _address;
+
+            public ReadOnlyStorageTrieStore(ReadOnlyTrieStore fullTrieStore, Hash256 address)
+            {
+                _trieStoreImplementation = fullTrieStore;
+                _address = address;
+            }
+
+            public TrieNode FindCachedOrUnknown(TreePath path, Hash256 hash)
+            {
+                return _trieStoreImplementation.FindCachedOrUnknown(_address, path, hash);
+            }
+
+            public byte[]? LoadRlp(TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None)
+            {
+                return _trieStoreImplementation.LoadRlp(_address, path, hash, flags);
+            }
+
+            public ITrieNodeResolver GetStorageTrieNodeResolver(Hash256? address)
+            {
+                return new ReadOnlyStorageTrieStore(_trieStoreImplementation, _address);
+            }
+
+            public void Dispose()
+            {
+            }
+
+            public void CommitNode(long blockNumber, NodeCommitInfo nodeCommitInfo, WriteFlags writeFlags = WriteFlags.None)
+            {
+            }
+
+            public void FinishBlockCommit(TrieType trieType, long blockNumber, TrieNode? root, WriteFlags writeFlags = WriteFlags.None)
+            {
+            }
+
+            public bool IsPersisted(TreePath path, in ValueHash256 keccak)
+            {
+                return _trieStoreImplementation.IsPersisted(_address, path, in keccak);
+            }
+
+            public IKeyValueStore AsKeyValueStore()
+            {
+                return _trieStoreImplementation.AsKeyValueStore(_address);
+            }
         }
     }
 }

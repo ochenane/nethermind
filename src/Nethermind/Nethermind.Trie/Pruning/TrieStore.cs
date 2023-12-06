@@ -178,9 +178,6 @@ namespace Nethermind.Trie.Pruning
 
         private readonly DirtyNodesCache _dirtyNodes;
 
-        private RootTrieStoreProxy _rootStore;
-        public ISmallTrieStore RootStore => _rootStore;
-
         private bool _lastPersistedReachedReorgBoundary;
         private Task _pruningTask = Task.CompletedTask;
         private CancellationTokenSource _pruningTaskCancellationTokenSource = new();
@@ -201,13 +198,11 @@ namespace Nethermind.Trie.Pruning
             _pruningStrategy = pruningStrategy ?? throw new ArgumentNullException(nameof(pruningStrategy));
             _persistenceStrategy = persistenceStrategy ?? throw new ArgumentNullException(nameof(persistenceStrategy));
             _dirtyNodes = new DirtyNodesCache(this);
-            _rootStore = new RootTrieStoreProxy(this);
         }
 
         public ISmallTrieStore GetTrieStore(Hash256? address)
         {
-            if (address == null) return RootStore;
-            return _rootStore.GetStorageTrieStore(address);
+            return new StorageTrieStore(this, address);
         }
 
         public long LastPersistedBlockNumber
@@ -1073,75 +1068,12 @@ namespace Nethermind.Trie.Pruning
             }
         }
 
-        public class RootTrieStoreProxy : ISmallTrieStore
-        {
-            private ITrieStore _trieStoreImplementation;
-            private ConcurrentDictionary<ValueHash256?, ISmallTrieStore> _storageTrieStore = new();
-
-            public RootTrieStoreProxy(ITrieStore implementation)
-            {
-                _trieStoreImplementation = implementation;
-            }
-
-            public TrieNode FindCachedOrUnknown(TreePath path, Hash256 hash)
-            {
-                return _trieStoreImplementation.FindCachedOrUnknown(null, path, hash);
-            }
-
-            public byte[]? LoadRlp(TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None)
-            {
-                return _trieStoreImplementation.LoadRlp(null, path, hash, flags);
-            }
-
-            public ITrieNodeResolver GetStorageTrieNodeResolver(Hash256? address)
-            {
-                return GetStorageTrieStore(address);
-            }
-
-            public ISmallTrieStore GetStorageTrieStore(Hash256? address)
-            {
-                return _storageTrieStore.GetOrAdd(address,
-                    (_) => new StorageTrieStore(_trieStoreImplementation, address));
-            }
-
-            public void Dispose()
-            {
-                _trieStoreImplementation.Dispose();
-            }
-
-            public void CommitNode(long blockNumber, NodeCommitInfo nodeCommitInfo, WriteFlags writeFlags = WriteFlags.None)
-            {
-                _trieStoreImplementation.CommitNode(blockNumber, null, nodeCommitInfo, writeFlags);
-            }
-
-            public void FinishBlockCommit(TrieType trieType, long blockNumber, TrieNode? root, WriteFlags writeFlags = WriteFlags.None)
-            {
-                _trieStoreImplementation.FinishBlockCommit(trieType, blockNumber, null, root, writeFlags);
-            }
-
-            public bool IsPersisted(TreePath path, in ValueHash256 keccak)
-            {
-                return _trieStoreImplementation.IsPersisted(null, path, in keccak);
-            }
-
-            public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached
-            {
-                add => _trieStoreImplementation.ReorgBoundaryReached += value;
-                remove => _trieStoreImplementation.ReorgBoundaryReached -= value;
-            }
-
-            public IKeyValueStore AsKeyValueStore()
-            {
-                return _trieStoreImplementation.AsKeyValueStore(null);
-            }
-        }
-
         public class StorageTrieStore : ISmallTrieStore
         {
             private ITrieStore _trieStoreImplementation;
-            private readonly Hash256 _address;
+            private readonly Hash256? _address;
 
-            public StorageTrieStore(ITrieStore fullTrieStore, Hash256 address)
+            public StorageTrieStore(ITrieStore fullTrieStore, Hash256? address)
             {
                 _trieStoreImplementation = fullTrieStore;
                 _address = address;
@@ -1159,7 +1091,7 @@ namespace Nethermind.Trie.Pruning
 
             public ITrieNodeResolver GetStorageTrieNodeResolver(Hash256? address)
             {
-                throw new Exception("Only two level trie");
+                return new StorageTrieStore(_trieStoreImplementation, address);
             }
 
             public void Dispose()
@@ -1180,12 +1112,6 @@ namespace Nethermind.Trie.Pruning
             public bool IsPersisted(TreePath path, in ValueHash256 keccak)
             {
                 return _trieStoreImplementation.IsPersisted(_address, path, in keccak);
-            }
-
-            public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached
-            {
-                add => _trieStoreImplementation.ReorgBoundaryReached += value;
-                remove => _trieStoreImplementation.ReorgBoundaryReached -= value;
             }
 
             public IKeyValueStore AsKeyValueStore()
