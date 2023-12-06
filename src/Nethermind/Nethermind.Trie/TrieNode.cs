@@ -965,7 +965,6 @@ namespace Nethermind.Trie
 
         private void UnresolveChild(int i)
         {
-            /*
             if (IsPersisted)
             {
                 _data![i] = null;
@@ -984,7 +983,6 @@ namespace Nethermind.Trie
                     }
                 }
             }
-            */
         }
 
         #endregion

@@ -380,6 +380,7 @@ namespace Nethermind.Trie.Pruning
 
         public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached;
 
+        /*
         public static byte[] GetNodeStoragePath(Hash256? address, TreePath path, ValueHash256 keccak)
         {
             byte[] pathBytes = new byte[40];
@@ -392,6 +393,99 @@ namespace Nethermind.Trie.Pruning
 
             // Node, this assume Path is zeroed
             path.Path.BytesAsSpan[..4].CopyTo(pathBytes.AsSpan()[4..]);
+            keccak.Bytes.CopyTo(pathBytes.AsSpan()[8..]);
+
+            return pathBytes;
+        }
+        */
+        private static int _pathScheme = int.Parse(Environment.GetEnvironmentVariable("PATH_SCHEME") ?? "2");
+
+        public static byte[] GetNodeStoragePath(Hash256? address, TreePath path, ValueHash256 keccak)
+        {
+            byte[] pathBytes = new byte[40];
+            Span<byte> pathSpan = pathBytes;
+
+            if (_pathScheme == 0)
+            {
+                if (address != null)
+                {
+                    address.Bytes[..4].CopyTo(pathSpan);
+                    // Node, this assume Path is zeroed
+                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
+                } else {
+                    // I guess we don't actually need 8 byte. 6 byte should be ok enough.
+                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
+                }
+            }
+            else if (_pathScheme == 1)
+            {
+                if (address != null)
+                {
+                    address.Bytes[..4].CopyTo(pathSpan);
+                    // Node, this assume Path is zeroed
+                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
+                } else {
+                    // Whole path
+                    path.Path.BytesAsSpan[..8].CopyTo(pathSpan);
+                }
+            }
+            else
+            {
+                if (address != null)
+                {
+                    address.Bytes[..4].CopyTo(pathSpan[1..]);
+                    // Node, this assume Path is zeroed
+                    path.Path.BytesAsSpan[..3].CopyTo(pathSpan[5..]);
+                } else {
+                    // I guess we don't actually need 8 byte. 6 byte should be ok enough.
+                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
+                }
+
+                // Attempt to split the tree into ranges trie level. This is so that the higher level would have some
+                // cache hit.
+                // 99p of length is 8.
+                if (_pathScheme == 2)
+                {
+                    // 99p of length is 8.
+                    if (path.Length <= 3)
+                    {
+                    }
+                    else if (path.Length <= 6)
+                    {
+                        pathBytes[0] = 1;
+                    }
+                    else
+                    {
+                        pathBytes[0] = 2;
+                    }
+                }
+                else if (_pathScheme == 3)
+                {
+                    // 99p of length is 8.
+                    if (path.Length <= 2)
+                    {
+                    }
+                    else if (path.Length <= 5)
+                    {
+                        pathBytes[0] = 1;
+                    }
+                    else
+                    {
+                        pathBytes[0] = 2;
+                    }
+                }
+                else
+                {
+                    if (path.Length <= 4)
+                    {
+                    }
+                    else
+                    {
+                        pathBytes[0] = 2;
+                    }
+                }
+            }
+
             keccak.Bytes.CopyTo(pathBytes.AsSpan()[8..]);
 
             return pathBytes;

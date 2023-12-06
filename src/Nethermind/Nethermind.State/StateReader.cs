@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Runtime.CompilerServices;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Db;
@@ -35,6 +36,7 @@ namespace Nethermind.State
             return GetState(stateRoot, address);
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public byte[] GetStorage(Hash256 stateRoot, Address address, in UInt256 index)
         {
             _state.RootHash = stateRoot;
