@@ -12,8 +12,8 @@ using Nethermind.Core.Caching;
 using Nethermind.Core.Collections;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
-using Nethermind.Db;
 using Nethermind.Logging;
+using Prometheus;
 
 namespace Nethermind.Trie.Pruning
 {
@@ -394,91 +394,38 @@ namespace Nethermind.Trie.Pruning
             return pathBytes;
         }
         */
-        private static int _pathScheme = int.Parse(Environment.GetEnvironmentVariable("PATH_SCHEME") ?? "2");
+        private static int _cutLength = int.Parse(Environment.GetEnvironmentVariable("CUT_LENGTH") ?? "4");
+        private static bool _centerPath = Environment.GetEnvironmentVariable("CENTER_PATH") == "1";
 
         public static byte[] GetNodeStoragePath(Hash256? address, TreePath path, ValueHash256 keccak)
         {
             byte[] pathBytes = new byte[40];
             Span<byte> pathSpan = pathBytes;
-
-            if (_pathScheme == 0)
+            TreePath centeredPath = path;
+            if (_centerPath)
             {
-                if (address != null)
-                {
-                    address.Bytes[..4].CopyTo(pathSpan);
-                    // Node, this assume Path is zeroed
-                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
-                } else {
-                    // I guess we don't actually need 8 byte. 6 byte should be ok enough.
-                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
-                }
+                // Modify the path so that it would be in the center of the range of its children.
+                // This improve cache hit rate by about 10%
+                if (centeredPath.Length < 16) centeredPath.Append(8);
             }
-            else if (_pathScheme == 1)
-            {
-                if (address != null)
-                {
-                    address.Bytes[..4].CopyTo(pathSpan);
-                    // Node, this assume Path is zeroed
-                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
-                } else {
-                    // Whole path
-                    path.Path.BytesAsSpan[..8].CopyTo(pathSpan);
-                }
-            }
-            else
-            {
-                if (address != null)
-                {
-                    address.Bytes[..4].CopyTo(pathSpan[1..]);
-                    // Node, this assume Path is zeroed
-                    path.Path.BytesAsSpan[..3].CopyTo(pathSpan[5..]);
-                } else {
-                    // I guess we don't actually need 8 byte. 6 byte should be ok enough.
-                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
-                }
 
-                // Attempt to split the tree into ranges trie level. This is so that the higher level would have some
-                // cache hit.
-                // 99p of length is 8.
-                if (_pathScheme == 2)
+            if (address != null)
+            {
+                // TODO: Calculate the average size of storage
+                // Note, pathSpan[0] == 0.
+                address.Bytes[..4].CopyTo(pathSpan[1..]);
+                centeredPath.Path.BytesAsSpan[..3].CopyTo(pathSpan[5..]);
+            } else {
+                centeredPath.Path.BytesAsSpan[..7].CopyTo(pathSpan[1..]);
+
+                // Separate the top level tree into its own section. This improve cache hit rate by about a few %.
+                if (path.Length <= _cutLength)
                 {
-                    // 99p of length is 8.
-                    if (path.Length <= 3)
-                    {
-                    }
-                    else if (path.Length <= 6)
-                    {
-                        pathBytes[0] = 1;
-                    }
-                    else
-                    {
-                        pathBytes[0] = 2;
-                    }
-                }
-                else if (_pathScheme == 3)
-                {
-                    // 99p of length is 8.
-                    if (path.Length <= 2)
-                    {
-                    }
-                    else if (path.Length <= 5)
-                    {
-                        pathBytes[0] = 1;
-                    }
-                    else
-                    {
-                        pathBytes[0] = 2;
-                    }
+                    pathBytes[0] = 1;
                 }
                 else
                 {
-                    if (path.Length <= 4)
-                    {
-                    }
-                    else
-                    {
-                        pathBytes[0] = 2;
-                    }
+                    pathBytes[0] = 2;
                 }
             }
 
@@ -531,7 +478,7 @@ namespace Nethermind.Trie.Pruning
 
             if (rlp is null)
             {
-                throw new TrieNodeException($"Node {keccak} is missing from the DB", keccak);
+                throw new TrieNodeException($"Node {address}, {path}, {keccak} is missing from the DB", keccak);
             }
 
             Metrics.LoadedFromDbNodesCount++;
@@ -766,8 +713,6 @@ namespace Nethermind.Trie.Pruning
 
         protected readonly IKeyValueStoreWithBatching _keyValueStore;
 
-        private readonly ConcurrentDictionary<ValueHash256?, TrieKeyValueStore> _publicStores = new();
-
         private readonly IPruningStrategy _pruningStrategy;
 
         private readonly IPersistenceStrategy _persistenceStrategy;
@@ -812,6 +757,11 @@ namespace Nethermind.Trie.Pruning
         // 72 byte per entry assuming no other overhead
         private LruCache<(Hash256?, TreePath), ValueHash256> _knownPersisted = new (1000000, "known_persisted");
 
+        private Counter TrieStorePersistedNode =
+            Prometheus.Metrics.CreateCounter("triestore_persisted_node", "persisted node");
+        private Counter TrieStoreRemovedNode =
+            Prometheus.Metrics.CreateCounter("triestore_removed_node", "persisted node");
+
         /// <summary>
         /// Persists all transient (not yet persisted) starting from <paramref name="commitSet"/> root.
         /// Already persisted nodes are skipped. After this action we are sure that the full state is available
@@ -824,6 +774,10 @@ namespace Nethermind.Trie.Pruning
             if (isCanonical)
             {
                 persistedNodes = new ArrayPoolList<(Hash256?, TreePath, Hash256)>(10);
+            }
+            else
+            {
+                _logger.Error($"non canon persist {Environment.StackTrace}");
             }
 
             void PersistNode(TrieNode tn, Hash256? address2, TreePath path)
@@ -850,6 +804,7 @@ namespace Nethermind.Trie.Pruning
             {
                 if (persistedNodes != null)
                 {
+                    TrieStorePersistedNode.Inc(persistedNodes.Count);
                     foreach ((Hash256? address, TreePath path, Hash256 hash) in persistedNodes)
                     {
                         if (_knownPersisted.TryGet((address, path), out ValueHash256 persistedHash))
@@ -859,6 +814,7 @@ namespace Nethermind.Trie.Pruning
                                 // Note: The path need to be collision resistant enough that we can't have two path
                                 // using the same hash.
                                 _currentBatch?.Remove(GetNodeStoragePath(address, path, persistedHash));
+                                TrieStoreRemovedNode.Inc();
                             }
                         }
                     }
@@ -900,6 +856,10 @@ namespace Nethermind.Trie.Pruning
                 // to prevent it from being removed from cache and also want to have it persisted.
 
                 if (_logger.IsTrace) _logger.Trace($"Persisting {nameof(TrieNode)} {currentNode} in snapshot {blockNumber}.");
+                if (address == null && path.Length == 0)
+                {
+                    _logger.Info($"Persisting root {path} {currentNode.Keccak}");
+                }
                 _currentBatch.Set(GetNodeStoragePath(address, path, currentNode.Keccak), currentNode.FullRlp.ToArray(), writeFlags);
                 currentNode.IsPersisted = true;
                 currentNode.LastSeen = Math.Max(blockNumber, currentNode.LastSeen ?? 0);
@@ -1080,10 +1040,7 @@ namespace Nethermind.Trie.Pruning
 
         public IKeyValueStore AsKeyValueStore(Hash256? address)
         {
-            return _publicStores.GetOrAdd(address, (key) =>
-            {
-                return new TrieKeyValueStore(this, key?.ToCommitment());
-            });
+            return new TrieKeyValueStore(this, address);
         }
 
         private class TrieKeyValueStore : IKeyValueStore

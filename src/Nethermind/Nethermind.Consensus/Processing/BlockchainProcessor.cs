@@ -573,7 +573,7 @@ public class BlockchainProcessor : IBlockchainProcessor, IBlockProcessingQueue
 
                 if (!_stateReader.HasStateForBlock(parentOfFirstBlock))
                 {
-                    throw new InvalidOperationException("Attempted to process a blockchain without having starting state");
+                    throw new InvalidOperationException($"Attempted to process a blockchain without having starting state. Prent {blocksToProcess[0].Number} {parentOfFirstBlock.ToString(BlockHeader.Format.Short)}");
                 }
             }
         }
@@ -605,11 +605,14 @@ public class BlockchainProcessor : IBlockchainProcessor, IBlockProcessingQueue
                 blocksToBeAddedToMain.Add(toBeProcessed);
             }
 
-            if (_logger.IsTrace)
-                _logger.Trace(
+            if (_logger.IsInfo)
+                _logger.Info(
                     $"To be processed (of {suggestedBlock.ToString(Block.Format.Short)}) is {toBeProcessed?.ToString(Block.Format.Short)}");
             if (toBeProcessed.IsGenesis)
             {
+                if (_logger.IsInfo)
+                    _logger.Info(
+                        $"Considered genesis");
                 break;
             }
 
@@ -617,7 +620,9 @@ public class BlockchainProcessor : IBlockchainProcessor, IBlockProcessingQueue
                 BlockTreeLookupOptions.TotalDifficultyNotNeeded);
             if (branchingPoint is null)
             {
-                // genesis block
+                if (_logger.IsInfo)
+                    _logger.Info(
+                        $"No parent for {toBeProcessed.Header.ToString(BlockHeader.Format.Short)}");
                 break;
             }
 
@@ -628,6 +633,9 @@ public class BlockchainProcessor : IBlockchainProcessor, IBlockProcessingQueue
             // !!!
             if (options.ContainsFlag(ProcessingOptions.IgnoreParentNotOnMainChain))
             {
+                if (_logger.IsInfo)
+                    _logger.Info(
+                        $"Ignore parent not on main chain");
                 break;
             }
 
@@ -640,8 +648,8 @@ public class BlockchainProcessor : IBlockchainProcessor, IBlockProcessingQueue
             bool isFastSyncTransition = headIsGenesis && toBeProcessedIsNotBlockOne;
             if (toBeProcessed is null)
             {
-                if (_logger.IsDebug)
-                    _logger.Debug(
+                if (_logger.IsInfo)
+                    _logger.Info(
                         $"Treating this as fast sync transition for {suggestedBlock.ToString(Block.Format.Short)}");
                 break;
             }
@@ -665,7 +673,7 @@ public class BlockchainProcessor : IBlockchainProcessor, IBlockProcessingQueue
                 }
                 else
                 {
-                    if (_logger.IsDebug) _logger.Debug($"A new block {toBeProcessed} in fast sync transition branch - state not found");
+                    if (_logger.IsInfo) _logger.Info($"A new block {toBeProcessed} in fast sync transition branch - state not found");
                 }
             }
 
@@ -678,8 +686,8 @@ public class BlockchainProcessor : IBlockchainProcessor, IBlockProcessingQueue
             bool notReachedTheReorgBoundary = branchingPoint.Number > (_blockTree.Head?.Header.Number ?? 0);
             bool notInForceProcessing = !options.ContainsFlag(ProcessingOptions.ForceProcessing);
             branchingCondition = (notFoundTheBranchingPointYet || notReachedTheReorgBoundary) && notInForceProcessing;
-            if (_logger.IsTrace)
-                _logger.Trace(
+            if (_logger.IsInfo)
+                _logger.Info(
                     $" Current branching point: {branchingPoint.Number}, {branchingPoint.Hash} TD: {branchingPoint.TotalDifficulty} Processing conditions notFoundTheBranchingPointYet {notFoundTheBranchingPointYet}, notReachedTheReorgBoundary: {notReachedTheReorgBoundary}, suggestedBlockIsPostMerge {suggestedBlockIsPostMerge}");
 
         } while (branchingCondition);

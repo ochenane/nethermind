@@ -66,7 +66,8 @@ namespace Nethermind.Consensus.Processing
         /// <summary>
         /// Processing options for engine_NewPayload
         /// </summary>
-        EthereumMerge = MarkAsProcessed | DoNotUpdateHead | IgnoreParentNotOnMainChain
+        // EthereumMerge = MarkAsProcessed | DoNotUpdateHead | IgnoreParentNotOnMainChain
+        EthereumMerge = MarkAsProcessed | DoNotUpdateHead
     }
 
     public static class ProcessingOptionsExtensions

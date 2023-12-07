@@ -248,7 +248,7 @@ namespace Nethermind.JsonRpc
             {
                 if (localErrorResponse?.Error?.SuppressWarning == false)
                 {
-                    if (_logger.IsWarn) _logger.Warn($"Error when handling {request} | {_jsonSerializer.Serialize(localErrorResponse)}");
+                    // if (_logger.IsWarn) _logger.Warn($"Error when handling {request} | {_jsonSerializer.Serialize(localErrorResponse)}");
                 }
 
                 Metrics.JsonRpcErrors++;
