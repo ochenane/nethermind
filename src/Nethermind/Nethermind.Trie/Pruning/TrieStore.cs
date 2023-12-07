@@ -637,10 +637,13 @@ namespace Nethermind.Trie.Pruning
         private void Persist(BlockCommitSet commitSet, WriteFlags writeFlags = WriteFlags.None, bool isCanonical = false)
         {
             ArrayPoolList<(Hash256?, TreePath, Hash256)>? persistedNodes = null;
+            /*
+            // TODO: Does not work. It could be that a path have more than one hash?
             if (isCanonical)
             {
                 persistedNodes = new ArrayPoolList<(Hash256?, TreePath, Hash256)>(10);
             }
+            */
 
             void PersistNode(TrieNode tn, Hash256? address2, TreePath path)
             {
