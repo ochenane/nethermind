@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Nethermind.Core;
+using Nethermind.Core.Caching;
 using Nethermind.Core.Collections;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
@@ -350,7 +351,7 @@ namespace Nethermind.Trie.Pruning
                     bool shouldPersistSnapshot = _persistenceStrategy.ShouldPersist(set.BlockNumber);
                     if (shouldPersistSnapshot)
                     {
-                        Persist(address, set, writeFlags);
+                        Persist(set, writeFlags, isCanonical: false);
                     }
                     else
                     {
@@ -658,7 +659,7 @@ namespace Nethermind.Trie.Pruning
                 {
                     BlockCommitSet blockCommitSet = candidateSets[index];
                     if (_logger.IsDebug) _logger.Debug($"Elevated pruning for candidate {blockCommitSet.BlockNumber}");
-                    Persist(null, blockCommitSet);
+                    Persist(blockCommitSet, isCanonical: true);
                 }
 
                 if (candidateSets.Count > 0)
@@ -811,15 +812,29 @@ namespace Nethermind.Trie.Pruning
             Debug.Assert(ReferenceEquals(CurrentPackage, commitSet), $"Current {nameof(BlockCommitSet)} is not same as the new package just after adding");
         }
 
+        // TODO: Separate this idea to another PR
+        // 72 byte per entry assuming no other overhead
+        private LruCache<(Hash256?, TreePath), ValueHash256> _knownPersisted = new (1000000, "known_persisted");
+
         /// <summary>
         /// Persists all transient (not yet persisted) starting from <paramref name="commitSet"/> root.
         /// Already persisted nodes are skipped. After this action we are sure that the full state is available
         /// for the block represented by this commit set.
         /// </summary>
         /// <param name="commitSet">A commit set of a block which root is to be persisted.</param>
-        private void Persist(Hash256? address, BlockCommitSet commitSet, WriteFlags writeFlags = WriteFlags.None)
+        private void Persist(BlockCommitSet commitSet, WriteFlags writeFlags = WriteFlags.None, bool isCanonical = false)
         {
-            void PersistNode(TrieNode tn, Hash256? address2, TreePath path) => Persist(address2, path, tn, commitSet.BlockNumber, writeFlags);
+            ArrayPoolList<(Hash256?, TreePath, Hash256)>? persistedNodes = null;
+            if (isCanonical)
+            {
+                persistedNodes = new ArrayPoolList<(Hash256?, TreePath, Hash256)>(10);
+            }
+
+            void PersistNode(TrieNode tn, Hash256? address2, TreePath path)
+            {
+                Persist(address2, path, tn, commitSet.BlockNumber, writeFlags);
+                persistedNodes?.Add((address2, path, tn.Keccak));
+            }
 
             try
             {
@@ -827,7 +842,7 @@ namespace Nethermind.Trie.Pruning
                 if (_logger.IsDebug) _logger.Debug($"Persisting from root {commitSet.Root} in {commitSet.BlockNumber}");
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
-                commitSet.Root?.CallRecursively(PersistNode, address, TreePath.Empty, GetTrieStore(address), true, _logger);
+                commitSet.Root?.CallRecursively(PersistNode, null, TreePath.Empty, GetTrieStore(null), true, _logger);
                 stopwatch.Stop();
                 Metrics.SnapshotPersistenceTime = stopwatch.ElapsedMilliseconds;
 
@@ -837,10 +852,36 @@ namespace Nethermind.Trie.Pruning
             }
             finally
             {
+                if (persistedNodes != null)
+                {
+                    foreach ((Hash256? address, TreePath path, Hash256 hash) in persistedNodes)
+                    {
+                        if (_knownPersisted.TryGet((address, path), out ValueHash256 persistedHash))
+                        {
+                            if (persistedHash != hash)
+                            {
+                                // Note: The path need to be collision resistant enough that we can't have two path
+                                // using the same hash.
+                                _currentBatch?.Remove(GetNodeStoragePath(address, path, persistedHash));
+                            }
+                        }
+                    }
+                }
+
                 // For safety we prefer to commit half of the batch rather than not commit at all.
                 // Generally hanging nodes are not a problem in the DB but anything missing from the DB is.
                 _currentBatch?.Dispose();
                 _currentBatch = null;
+
+                if (persistedNodes != null)
+                {
+                    foreach ((Hash256? address, TreePath path, Hash256 hash) in persistedNodes)
+                    {
+                        _knownPersisted.Set((address, path), hash);
+                    }
+                }
+
+                persistedNodes?.Dispose();
             }
 
             PruneCurrentSet();
@@ -977,7 +1018,7 @@ namespace Nethermind.Trie.Pruning
                 {
                     BlockCommitSet blockCommitSet = candidateSets[index];
                     if (_logger.IsDebug) _logger.Debug($"Persisting on disposal {blockCommitSet} (cache memory at {MemoryUsedByDirtyCache})");
-                    Persist(null, blockCommitSet);
+                    Persist(blockCommitSet);
                 }
 
                 if (candidateSets.Count == 0)
