@@ -766,8 +766,6 @@ namespace Nethermind.Trie.Pruning
 
         protected readonly IKeyValueStoreWithBatching _keyValueStore;
 
-        private readonly ConcurrentDictionary<ValueHash256?, TrieKeyValueStore> _publicStores = new();
-
         private readonly IPruningStrategy _pruningStrategy;
 
         private readonly IPersistenceStrategy _persistenceStrategy;
@@ -1080,10 +1078,7 @@ namespace Nethermind.Trie.Pruning
 
         public IKeyValueStore AsKeyValueStore(Hash256? address)
         {
-            return _publicStores.GetOrAdd(address, (key) =>
-            {
-                return new TrieKeyValueStore(this, key?.ToCommitment());
-            });
+            return new TrieKeyValueStore(this, address);
         }
 
         private class TrieKeyValueStore : IKeyValueStore
