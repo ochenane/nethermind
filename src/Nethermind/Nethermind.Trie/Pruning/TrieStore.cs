@@ -382,6 +382,7 @@ namespace Nethermind.Trie.Pruning
         }
 
         public bool IsNodeCached(PruneKey key) => _dirtyNodes.IsNodeCached(key);
+        public bool IsNodeCached(Hash256? address, TreePath path, Hash256? hash) => _dirtyNodes.IsNodeCached(new PruneKey(address, path, hash));
 
         public TrieNode FindCachedOrUnknown(Hash256? address, TreePath path, Hash256? hash)
         {

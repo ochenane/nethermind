@@ -58,7 +58,7 @@ public class NodeStorage: INodeStorage
         return pathBytes;
     }
 
-    public byte[]? Get(Hash256? address, TreePath path, ValueHash256 keccak, ReadFlags readFlags)
+    public byte[]? Get(Hash256? address, TreePath path, ValueHash256 keccak, ReadFlags readFlags = ReadFlags.None)
     {
         return _keyValueStore.Get(GetNodeStoragePath(address, path, keccak), readFlags);
     }
