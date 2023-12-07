@@ -12,6 +12,7 @@ namespace Nethermind.Trie.Pruning;
 public class NodeStorage: INodeStorage
 {
     protected readonly IKeyValueStore _keyValueStore;
+    private static byte[] EmptyTreeHashBytes = new byte[] { 128 };
 
     public NodeStorage(IKeyValueStore keyValueStore)
     {
@@ -60,11 +61,21 @@ public class NodeStorage: INodeStorage
 
     public byte[]? Get(Hash256? address, TreePath path, ValueHash256 keccak, ReadFlags readFlags = ReadFlags.None)
     {
+        if (keccak == Keccak.EmptyTreeHash)
+        {
+            return EmptyTreeHashBytes;
+        }
+
         return _keyValueStore.Get(GetNodeStoragePath(address, path, keccak), readFlags);
     }
 
     public bool KeyExists(Hash256? address, TreePath path, Hash256 keccak)
     {
+        if (keccak == Keccak.EmptyTreeHash)
+        {
+            return true;
+        }
+
         return _keyValueStore.KeyExists(GetNodeStoragePath(address, path, keccak));
     }
 
@@ -75,6 +86,11 @@ public class NodeStorage: INodeStorage
 
     public void Set(Hash256? address, TreePath path, Hash256 keccak, byte[] toArray, WriteFlags writeFlags)
     {
+        if (keccak == Keccak.EmptyTreeHash)
+        {
+            return;
+        }
+
         _keyValueStore.Set(GetNodeStoragePath(address, path, keccak), toArray, writeFlags);
     }
 
@@ -125,11 +141,21 @@ public class NodeWriteBatch : INodeWriteBatch
 
     public void Remove(Hash256? address, TreePath path, ValueHash256 keccak)
     {
+        if (keccak == Keccak.EmptyTreeHash)
+        {
+            return;
+        }
+
         _writeBatch.Remove(NodeStorage.GetNodeStoragePath(address, path, keccak));
     }
 
     public void Set(Hash256? address, TreePath path, Hash256 keccak, byte[] toArray, WriteFlags writeFlags)
     {
+        if (keccak == Keccak.EmptyTreeHash)
+        {
+            return;
+        }
+
         _writeBatch.Set(NodeStorage.GetNodeStoragePath(address, path, keccak), toArray, writeFlags);
     }
 }
