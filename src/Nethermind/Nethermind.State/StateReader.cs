@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Runtime.CompilerServices;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
 using Nethermind.Db;
@@ -15,17 +16,19 @@ namespace Nethermind.State
 {
     public class StateReader : IStateReader
     {
-        private readonly IDb _codeDb;
+        private readonly IKeyValueStore _codeDb;
         private readonly ILogger _logger;
+        private readonly ILogManager _logManager;
+        private readonly ITrieStore _trieStore;
         private readonly StateTree _state;
-        private readonly StorageTree _storage;
 
-        public StateReader(ITrieStore? trieStore, IDb? codeDb, ILogManager? logManager)
+        public StateReader(ITrieStore? trieStore, IKeyValueStore? codeDb, ILogManager? logManager)
         {
             _logger = logManager?.GetClassLogger<StateReader>() ?? throw new ArgumentNullException(nameof(logManager));
+            _logManager = logManager;
             _codeDb = codeDb ?? throw new ArgumentNullException(nameof(codeDb));
-            _state = new StateTree(trieStore, logManager);
-            _storage = new StorageTree(trieStore, Keccak.EmptyTreeHash, logManager);
+            _trieStore = trieStore;
+            _state = new StateTree(trieStore.GetTrieStore(null), logManager);
         }
 
         public Account? GetAccount(Hash256 stateRoot, Address address)
@@ -33,15 +36,15 @@ namespace Nethermind.State
             return GetState(stateRoot, address);
         }
 
-        public byte[] GetStorage(Hash256 storageRoot, in UInt256 index)
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public byte[] GetStorage(Hash256 stateRoot, Address address, in UInt256 index)
         {
-            if (storageRoot == Keccak.EmptyTreeHash)
-            {
-                return new byte[] { 0 };
-            }
+            _state.RootHash = stateRoot;
+            Account? account = _state.Get(address);
+            if (account == null) return null;
 
-            Metrics.StorageTreeReads++;
-            return _storage.Get(index, storageRoot);
+            StorageTree storageTree = new StorageTree(_trieStore.GetTrieStore(address.ToAccountPath), account.StorageRoot, _logManager);
+            return storageTree.Get(index);
         }
 
         public UInt256 GetBalance(Hash256 stateRoot, Address address)

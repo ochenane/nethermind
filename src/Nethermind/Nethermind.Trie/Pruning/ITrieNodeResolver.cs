@@ -15,13 +15,15 @@ namespace Nethermind.Trie.Pruning
         /// </summary>
         /// <param name="hash">Keccak hash of the RLP of the node.</param>
         /// <returns></returns>
-        TrieNode FindCachedOrUnknown(Hash256 hash);
+        TrieNode FindCachedOrUnknown(TreePath path, Hash256 hash);
 
         /// <summary>
         /// Loads RLP of the node.
         /// </summary>
         /// <param name="hash"></param>
         /// <returns></returns>
-        byte[]? LoadRlp(Hash256 hash, ReadFlags flags = ReadFlags.None);
+        byte[]? LoadRlp(TreePath path, Hash256 hash, ReadFlags flags = ReadFlags.None);
+
+        ITrieNodeResolver GetStorageTrieNodeResolver(Hash256? address);
     }
 }

@@ -54,7 +54,8 @@ namespace Nethermind.Synchronization.Test.SnapSync
             byte[][] lastProof = CreateProofForPath(TestItem.Tree.AccountsWithPaths[5].Path.Bytes);
 
             MemDb db = new();
-            TrieStore store = new(db, LimboLogs.Instance);
+            TrieStore fullStore = new(db, LimboLogs.Instance);
+            ISmallTrieStore store = fullStore.GetTrieStore(null);
             StateTree tree = new(store, LimboLogs.Instance);
 
             IList<TrieNode> nodes = new List<TrieNode>();
@@ -63,7 +64,7 @@ namespace Nethermind.Synchronization.Test.SnapSync
             {
                 byte[] nodeBytes = (firstProof!)[i];
                 var node = new TrieNode(NodeType.Unknown, nodeBytes);
-                node.ResolveKey(store, i == 0);
+                node.ResolveKey(store, TreePath.Empty, i == 0);
 
                 nodes.Add(node);
                 if (i < (firstProof!).Length - 1)
@@ -78,7 +79,7 @@ namespace Nethermind.Synchronization.Test.SnapSync
             {
                 byte[] nodeBytes = (lastProof!)[i];
                 var node = new TrieNode(NodeType.Unknown, nodeBytes);
-                node.ResolveKey(store, i == 0);
+                node.ResolveKey(store, TreePath.Empty, i == 0);
 
                 nodes.Add(node);
                 if (i < (lastProof!).Length - 1)

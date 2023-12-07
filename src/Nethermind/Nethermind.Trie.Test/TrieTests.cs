@@ -234,7 +234,7 @@ namespace Nethermind.Trie.Test
         {
             MemDb memDb = new();
             using TrieStore trieStore = new(memDb, new MemoryLimit(128.MB()), Persist.EveryBlock, _logManager);
-            PatriciaTree patriciaTree = new(trieStore, Keccak.EmptyTreeHash, true, true, _logManager);
+            PatriciaTree patriciaTree = new(trieStore.GetTrieStore(null), Keccak.EmptyTreeHash, true, true, _logManager);
 
             for (int j = 0; j < i; j++)
             {
@@ -259,7 +259,7 @@ namespace Nethermind.Trie.Test
         {
             MemDb memDb = new();
             using TrieStore trieStore = new(memDb, new MemoryLimit(128.MB()), Persist.EveryBlock, _logManager);
-            PatriciaTree patriciaTree = new(trieStore, Keccak.EmptyTreeHash, true, true, _logManager);
+            PatriciaTree patriciaTree = new(trieStore.GetTrieStore(null), Keccak.EmptyTreeHash, true, true, _logManager);
 
             for (int j = 0; j < i; j++)
             {
@@ -395,6 +395,12 @@ namespace Nethermind.Trie.Test
                 Hash256 key = TestItem.Keccaks[j];
                 checkTree.Get(key.Bytes).Should().BeNull($@"{i} {j}");
             }
+        }
+
+        [Test]
+        public void SmallerTest()
+        {
+            Test_add_and_delete_many_next_block(2);
         }
 
         public void Test_add_and_delete_many_next_block(int i)
@@ -998,6 +1004,7 @@ namespace Nethermind.Trie.Test
 
             for (int blockNumber = 0; blockNumber < blocksCount; blockNumber++)
             {
+                Console.Out.WriteLine($"Block {blockNumber}");
                 bool isEmptyBlock = _random.Next(5) == 0;
                 if (!isEmptyBlock)
                 {
