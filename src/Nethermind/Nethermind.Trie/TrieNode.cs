@@ -844,14 +844,11 @@ namespace Nethermind.Trie
                 else if (Value.Length > 64) // if not a storage leaf
                 {
                     Hash256 storageHash = _accountDecoder.DecodeStorageRootOnly(Value.AsRlpStream());
-                    if (storageHash != Nethermind.Core.Crypto.Keccak.EmptyTreeHash)
-                    {
-                        TreePath storagePath = currentPath;
-                        storagePath.Append(Key);
-                        hasStorage = true;
-                        _storageRoot = storageRoot = resolver.GetStorageTrieNodeResolver(storagePath.Path.ToCommitment())
-                            .FindCachedOrUnknown(new TreePath(), storageHash);
-                    }
+                    TreePath storagePath = currentPath;
+                    storagePath.Append(Key);
+                    hasStorage = true;
+                    _storageRoot = storageRoot = resolver.GetStorageTrieNodeResolver(storagePath.Path.ToCommitment())
+                        .FindCachedOrUnknown(new TreePath(), storageHash);
                 }
             }
 
