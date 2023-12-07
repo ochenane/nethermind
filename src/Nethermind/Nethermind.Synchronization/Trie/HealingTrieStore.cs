@@ -58,7 +58,7 @@ public class HealingTrieStore : TrieStore
             rlp = _recovery.Recover(rlpHash, request).GetAwaiter().GetResult();
             if (rlp is not null)
             {
-                _keyValueStore.Set(rlpHash.Bytes, rlp);
+                _nodeStorage.Set(null, TreePath.Empty, rlpHash, rlp, WriteFlags.None);
                 return true;
             }
         }

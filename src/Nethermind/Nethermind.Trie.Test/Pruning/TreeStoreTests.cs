@@ -78,7 +78,8 @@ namespace Nethermind.Trie.Test.Pruning
             ISmallTrieStore trieStore = fullTrieStore.GetTrieStore(null);
             trieStore.CommitNode(1234, new NodeCommitInfo(trieNode, TreePath.Empty), WriteFlags.LowPriority);
             trieStore.FinishBlockCommit(TrieType.State, 1234, trieNode, WriteFlags.LowPriority);
-            testMemDb.KeyWasWrittenWithFlags(trieNode.Keccak.BytesToArray(), WriteFlags.LowPriority);
+
+            testMemDb.KeyWasWrittenWithFlags(NodeStorage.GetNodeStoragePath(null, TreePath.Empty, trieNode.Keccak), WriteFlags.LowPriority);
         }
 
         [Test]
@@ -273,6 +274,7 @@ namespace Nethermind.Trie.Test.Pruning
             a.ResolveKey(NullTrieNodeResolver.Instance, TreePath.Empty, true);
 
             MemDb memDb = new();
+            NodeStorage storage = new NodeStorage(memDb);
 
             using TrieStore fullTrieStore = new(memDb, new MemoryLimit(16.MB()), new ConstantInterval(4), _logManager);
             ISmallTrieStore trieStore = fullTrieStore.GetTrieStore(null);
@@ -284,8 +286,8 @@ namespace Nethermind.Trie.Test.Pruning
             trieStore.FinishBlockCommit(TrieType.State, 3, a);
             trieStore.FinishBlockCommit(TrieType.State, 4, a);
 
-            memDb[a.Keccak!.Bytes].Should().NotBeNull();
-            // fullTrieStore.IsNodeCached(a.Keccak).Should().BeTrue();
+            storage.Get(null, TreePath.Empty, a.Keccak).Should().NotBeNull();
+            fullTrieStore.IsNodeCached(null, TreePath.Empty,a.Keccak).Should().BeTrue();
         }
 
         [Test]
@@ -295,6 +297,7 @@ namespace Nethermind.Trie.Test.Pruning
             a.ResolveKey(NullTrieNodeResolver.Instance, TreePath.Empty, true);
 
             MemDb memDb = new();
+            NodeStorage storage = new NodeStorage(memDb);
 
             using TrieStore fullTrieStore = new(memDb, new MemoryLimit(16.MB()), No.Persistence, _logManager);
             ISmallTrieStore trieStore = fullTrieStore.GetTrieStore(null);
@@ -306,15 +309,16 @@ namespace Nethermind.Trie.Test.Pruning
             trieStore.FinishBlockCommit(TrieType.State, 3, a);
             //  <- do not persist in this test
 
-            memDb[a.Keccak!.Bytes].Should().BeNull();
-            // fullTrieStore.IsNodeCached(a.Keccak).Should().BeTrue();
+            storage.Get(null, TreePath.Empty, a.Keccak).Should().BeNull();
+            fullTrieStore.IsNodeCached(null, TreePath.Empty, a.Keccak).Should().BeTrue();
         }
 
         [Test]
         public void Can_load_from_rlp()
         {
-            MemDb memDb = new();
-            memDb[Keccak.Zero.Bytes] = new byte[] { 1, 2, 3 };
+            MemDb memDb = new MemDb();
+            NodeStorage storage = new NodeStorage(memDb);
+            storage.Set(null, TreePath.Empty, Keccak.Zero, new byte[] { 1, 2, 3 }, WriteFlags.None);
 
             using TrieStore trieStore = new(memDb, _logManager);
             trieStore.LoadRlp(null, TreePath.Empty, Keccak.Zero).Should().NotBeNull();
@@ -327,6 +331,7 @@ namespace Nethermind.Trie.Test.Pruning
             a.ResolveKey(NullTrieNodeResolver.Instance, TreePath.Empty, true);
 
             MemDb memDb = new();
+            NodeStorage storage = new NodeStorage(memDb);
 
             using TrieStore fullTrieStore = new(memDb, new MemoryLimit(16.MB()), new ConstantInterval(4), _logManager);
             ISmallTrieStore trieStore = fullTrieStore.GetTrieStore(null);
@@ -342,8 +347,8 @@ namespace Nethermind.Trie.Test.Pruning
             trieStore.FinishBlockCommit(TrieType.State, 7, a);
             trieStore.FinishBlockCommit(TrieType.State, 8, a);
 
-            memDb[a.Keccak!.Bytes].Should().NotBeNull();
-            // fullTrieStore.IsNodeCached(a.Keccak).Should().BeTrue();
+            storage.Get(null, TreePath.Empty, a.Keccak).Should().NotBeNull();
+            fullTrieStore.IsNodeCached(null, TreePath.Empty, a.Keccak).Should().BeTrue();
         }
 
         [Test]
@@ -356,6 +361,7 @@ namespace Nethermind.Trie.Test.Pruning
             b.ResolveKey(NullTrieNodeResolver.Instance, TreePath.Empty, true);
 
             MemDb memDb = new();
+            NodeStorage nodeStorage = new NodeStorage(memDb);
 
             using TrieStore fullTrieStore = new(memDb, new MemoryLimit(16.MB()), new ConstantInterval(4), _logManager);
             ISmallTrieStore trieStore = fullTrieStore.GetTrieStore(null);
@@ -372,8 +378,8 @@ namespace Nethermind.Trie.Test.Pruning
             trieStore.FinishBlockCommit(TrieType.State, 7, b);
             trieStore.FinishBlockCommit(TrieType.State, 8, b);
 
-            memDb[a.Keccak!.Bytes].Should().NotBeNull();
-            // fullTrieStore.IsNodeCached(a.Keccak).Should().BeTrue();
+            nodeStorage.Get(null, TreePath.Empty, a.Keccak).Should().NotBeNull();
+            fullTrieStore.IsNodeCached(null, TreePath.Empty, a.Keccak).Should().BeTrue();
         }
 
         [Test]
@@ -403,7 +409,7 @@ namespace Nethermind.Trie.Test.Pruning
             trieStore.FinishBlockCommit(TrieType.State, 8, b); // should be 'a' to test properly
 
             memDb[a.Keccak!.Bytes].Should().BeNull();
-            // fullTrieStore.IsNodeCached(a.Keccak).Should().BeTrue();
+            fullTrieStore.IsNodeCached(null, TreePath.Empty, a.Keccak).Should().BeTrue();
         }
 
         private class BadDb : IKeyValueStoreWithBatching
@@ -472,16 +478,20 @@ namespace Nethermind.Trie.Test.Pruning
             TrieNode a = new(NodeType.Leaf);
             Account account = new(1, 1, storage1.Keccak, Keccak.OfAnEmptyString);
             a.Value = _accountDecoder.Encode(account).Bytes;
-            a.Key = Bytes.FromHexString("abc");
+            a.Key = Nibbles.BytesToNibbleBytes(TestItem.KeccakA.BytesToArray());
             a.ResolveKey(NullTrieNodeResolver.Instance, TreePath.Empty, true);
 
             MemDb memDb = new();
+            NodeStorage asStorage = new NodeStorage(memDb);
 
             using TrieStore fullTrieStore = new(memDb, new MemoryLimit(16.MB()), new ConstantInterval(4), _logManager);
             ISmallTrieStore trieStore = fullTrieStore.GetTrieStore(null);
             trieStore.FinishBlockCommit(TrieType.State, 0, null);
             trieStore.CommitNode(1, new NodeCommitInfo(a, TreePath.Empty));
-            trieStore.CommitNode(1, new NodeCommitInfo(storage1, TreePath.Empty));
+            fullTrieStore.GetTrieStore(TestItem.KeccakA)
+                .CommitNode(1, new NodeCommitInfo(storage1, TreePath.Empty));
+            fullTrieStore.GetTrieStore(TestItem.KeccakA)
+                .FinishBlockCommit(TrieType.Storage, 1, storage1);
             trieStore.FinishBlockCommit(TrieType.Storage, 1, storage1);
             trieStore.FinishBlockCommit(TrieType.State, 1, a);
             trieStore.FinishBlockCommit(TrieType.State, 2, a);
@@ -492,9 +502,9 @@ namespace Nethermind.Trie.Test.Pruning
             trieStore.FinishBlockCommit(TrieType.State, 7, a);
             trieStore.FinishBlockCommit(TrieType.State, 8, a);
 
-            memDb[a.Keccak!.Bytes].Should().NotBeNull();
-            memDb[storage1.Keccak!.Bytes].Should().NotBeNull();
-            // fullTrieStore.IsNodeCached(a.Keccak).Should().BeTrue();
+            asStorage.Get(null, TreePath.Empty, a.Keccak).Should().NotBeNull();
+            asStorage.Get(TestItem.KeccakA, TreePath.Empty, storage1.Keccak).Should().NotBeNull();
+            fullTrieStore.IsNodeCached(null, TreePath.Empty, a.Keccak).Should().BeTrue();
             // trieStore.IsInMemory(storage1.Keccak).Should().BeFalse();
         }
 
@@ -534,20 +544,25 @@ namespace Nethermind.Trie.Test.Pruning
 
             memDb[a.Keccak!.Bytes].Should().BeNull();
             memDb[storage1.Keccak!.Bytes].Should().BeNull();
-            // fullTrieStore.IsNodeCached(a.Keccak).Should().BeTrue();
-            // fullTrieStore.IsNodeCached(storage1.Keccak).Should().BeTrue();
+            fullTrieStore.IsNodeCached(null, TreePath.Empty, a.Keccak).Should().BeTrue();
+            fullTrieStore.IsNodeCached(null, TreePath.Empty, storage1.Keccak).Should().BeTrue();
         }
 
         [Test]
         public void Will_combine_same_storage()
         {
+            byte[] storage1Nib = Nibbles.BytesToNibbleBytes(TestItem.KeccakA.BytesToArray());
+            storage1Nib[0] = 0;
+            byte[] storage2Nib = Nibbles.BytesToNibbleBytes(TestItem.KeccakA.BytesToArray());
+            storage2Nib[0] = 1;
+
             TrieNode storage1 = new(NodeType.Leaf, new byte[32]);
             storage1.ResolveKey(NullTrieNodeResolver.Instance, TreePath.Empty, true);
 
             TrieNode a = new(NodeType.Leaf);
             Account account = new(1, 1, storage1.Keccak, Keccak.OfAnEmptyString);
             a.Value = _accountDecoder.Encode(account).Bytes;
-            a.Key = Bytes.FromHexString("abc");
+            a.Key = storage1Nib[1..];
             a.ResolveKey(NullTrieNodeResolver.Instance, TreePath.Empty, true);
 
             TrieNode storage2 = new(NodeType.Leaf, new byte[32]);
@@ -556,7 +571,7 @@ namespace Nethermind.Trie.Test.Pruning
             TrieNode b = new(NodeType.Leaf);
             Account accountB = new(2, 1, storage2.Keccak, Keccak.OfAnEmptyString);
             b.Value = _accountDecoder.Encode(accountB).Bytes;
-            b.Key = Bytes.FromHexString("abcd");
+            b.Key = storage2Nib[1..];
             b.ResolveKey(NullTrieNodeResolver.Instance, TreePath.Empty, true);
 
             TrieNode branch = new(NodeType.Branch);
@@ -565,15 +580,21 @@ namespace Nethermind.Trie.Test.Pruning
             branch.ResolveKey(NullTrieStore.Instance, TreePath.Empty, true);
 
             MemDb memDb = new();
+            NodeStorage storage = new NodeStorage(memDb);
 
             using TrieStore fullTrieStore = new(memDb, new MemoryLimit(16.MB()), new ConstantInterval(4), _logManager);
             ISmallTrieStore trieStore = fullTrieStore.GetTrieStore(null);
 
             trieStore.FinishBlockCommit(TrieType.State, 0, null);
-            trieStore.CommitNode(1, new NodeCommitInfo(storage1, TreePath.Empty));
-            trieStore.FinishBlockCommit(TrieType.Storage, 1, storage1);
-            trieStore.CommitNode(1, new NodeCommitInfo(storage2, TreePath.Empty));
-            trieStore.FinishBlockCommit(TrieType.Storage, 1, storage2);
+
+            ISmallTrieStore storageTrieStore = fullTrieStore.GetTrieStore(new Hash256(Nibbles.ToBytes(storage1Nib)));
+            storageTrieStore.CommitNode(1, new NodeCommitInfo(storage1, TreePath.Empty));
+            storageTrieStore.FinishBlockCommit(TrieType.Storage, 1, storage1);
+
+            storageTrieStore = fullTrieStore.GetTrieStore(new Hash256(Nibbles.ToBytes(storage2Nib)));
+            storageTrieStore.CommitNode(1, new NodeCommitInfo(storage2, TreePath.Empty));
+            storageTrieStore.FinishBlockCommit(TrieType.Storage, 1, storage2);
+
             trieStore.CommitNode(1, new NodeCommitInfo(a, TreePath.Empty));
             trieStore.CommitNode(1, new NodeCommitInfo(b, TreePath.Empty));
             trieStore.CommitNode(1, new NodeCommitInfo(branch, TreePath.Empty));
@@ -586,10 +607,10 @@ namespace Nethermind.Trie.Test.Pruning
             trieStore.FinishBlockCommit(TrieType.State, 7, branch);
             trieStore.FinishBlockCommit(TrieType.State, 8, branch);
 
-            memDb[a.Keccak!.Bytes].Should().NotBeNull();
-            memDb[storage1.Keccak!.Bytes].Should().NotBeNull();
-            // fullTrieStore.IsNodeCached(a.Keccak).Should().BeTrue();
-            // fullTrieStore.IsNodeCached(storage1.Keccak).Should().BeTrue();
+            storage.Get(null, TreePath.Empty, a.Keccak).Should().NotBeNull();
+            storage.Get(new Hash256(Nibbles.ToBytes(storage1Nib)), TreePath.Empty, storage1.Keccak).Should().NotBeNull();
+            fullTrieStore.IsNodeCached(null, TreePath.Empty, a.Keccak).Should().BeTrue();
+            fullTrieStore.IsNodeCached(new Hash256(Nibbles.ToBytes(storage1Nib)), TreePath.Empty, storage1.Keccak).Should().BeTrue();
         }
 
         [Test]
@@ -678,7 +699,7 @@ namespace Nethermind.Trie.Test.Pruning
             TrieNode node = new(NodeType.Leaf);
             Account account = new(1, 1, TestItem.KeccakA, Keccak.OfAnEmptyString);
             node.Value = _accountDecoder.Encode(account).Bytes;
-            node.Key = Bytes.FromHexString("abc");
+            node.Key = Nibbles.BytesToNibbleBytes(TestItem.KeccakA.BytesToArray());
             node.ResolveKey(NullTrieNodeResolver.Instance, TreePath.Empty, true);
 
             using TrieStore fullTrieStore = new(new MemDb(), new TestPruningStrategy(pruning), No.Persistence, _logManager);
