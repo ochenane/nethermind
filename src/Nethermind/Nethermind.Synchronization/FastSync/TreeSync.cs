@@ -57,7 +57,7 @@ namespace Nethermind.Synchronization.FastSync
 
         private readonly ILogger _logger;
         private readonly IDb _codeDb;
-        private readonly IDb _stateDb;
+        private readonly INodeStorage _stateDb;
 
         private readonly IBlockTree _blockTree;
 
@@ -79,7 +79,7 @@ namespace Nethermind.Synchronization.FastSync
         {
             _syncMode = syncMode;
             _codeDb = codeDb ?? throw new ArgumentNullException(nameof(codeDb));
-            _stateDb = stateDb ?? throw new ArgumentNullException(nameof(stateDb));
+            _stateDb = new NodeStorage(stateDb ?? throw new ArgumentNullException(nameof(stateDb)));
             _blockTree = blockTree ?? throw new ArgumentNullException(nameof(blockTree));
 
             _logger = logManager.GetClassLogger() ?? throw new ArgumentNullException(nameof(logManager));
@@ -376,7 +376,7 @@ namespace Nethermind.Synchronization.FastSync
             try
             {
                 // it finished downloading
-                rootNodeKeyExists = _stateDb.KeyExists( TrieStore.GetNodeStoragePath(null, TreePath.Empty, _rootNode));
+                rootNodeKeyExists = _stateDb.KeyExists( null, TreePath.Empty, _rootNode);
             }
             catch (ObjectDisposedException)
             {
@@ -530,9 +530,8 @@ namespace Nethermind.Synchronization.FastSync
                     }
                     else
                     {
-                        IDb dbToCheck = _stateDb;
                         (Hash256? storageRoot, TreePath path) = syncItem.AddressAndPath;
-                        keyExists = dbToCheck.KeyExists(TrieStore.GetNodeStoragePath(storageRoot, path, syncItem.Hash));
+                        keyExists = _stateDb.KeyExists(storageRoot, path, syncItem.Hash);
                     }
 
                     if (keyExists)
@@ -639,8 +638,7 @@ namespace Nethermind.Synchronization.FastSync
                         Interlocked.Increment(ref Metrics.SyncedStateTrieNodes);
 
                         (Hash256? storageRoot, TreePath path) = syncItem.AddressAndPath;
-                        byte[] storageAddr = TrieStore.GetNodeStoragePath(storageRoot, path, syncItem.Hash);
-                        _stateDb.Set(storageAddr, data);
+                        _stateDb.Set(storageRoot, path, syncItem.Hash, data, WriteFlags.None);
                     }
                     finally
                     {
@@ -679,8 +677,7 @@ namespace Nethermind.Synchronization.FastSync
                         Interlocked.Add(ref _data.DataSize, data.Length);
                         Interlocked.Increment(ref Metrics.SyncedStorageTrieNodes);
                         (Hash256? storageRoot, TreePath path) = syncItem.AddressAndPath;
-                        byte[] storageAddr = TrieStore.GetNodeStoragePath(storageRoot, path, syncItem.Hash);
-                        _stateDb.Set(storageAddr, data);
+                        _stateDb.Set(storageRoot, path, syncItem.Hash, data, WriteFlags.None);
                     }
                     finally
                     {

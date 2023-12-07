@@ -12,7 +12,6 @@ using Nethermind.Core.Caching;
 using Nethermind.Core.Collections;
 using Nethermind.Core.Crypto;
 using Nethermind.Core.Extensions;
-using Nethermind.Db;
 using Nethermind.Logging;
 
 namespace Nethermind.Trie.Pruning
@@ -23,49 +22,7 @@ namespace Nethermind.Trie.Pruning
     /// </summary>
     public class TrieStore : ITrieStore
     {
-        public struct PruneKey
-        {
-            private byte[] storagePath;
-            public PruneKey(Hash256? address, TreePath path, ValueHash256 keccak)
-            {
-                storagePath = GetNodeStoragePath(address, path, keccak);
-            }
-
-            public override bool Equals(object? obj)
-            {
-                if (obj is PruneKey otherKey)
-                {
-                    return Bytes.EqualityComparer.Equals(storagePath, otherKey.storagePath);
-                }
-
-                return false;
-            }
-
-            public override int GetHashCode()
-            {
-                return storagePath.GetSimplifiedHashCode();
-            }
-
-            public static bool operator ==(PruneKey? a, PruneKey? b)
-            {
-                if (a is null)
-                {
-                    return b is null;
-                }
-
-                if (b is null)
-                {
-                    return false;
-                }
-
-                return Bytes.EqualityComparer.Equals(a.Value.storagePath, b.Value.storagePath);
-            }
-
-            public static bool operator !=(PruneKey? a, PruneKey? b)
-            {
-                return !(a == b);
-            }
-        }
+        public record PruneKey(Hash256? address, TreePath path, ValueHash256 keccak);
 
         private class DirtyNodesCache
         {
@@ -175,7 +132,7 @@ namespace Nethermind.Trie.Pruning
 
         private int _isFirst;
 
-        private IWriteBatch? _currentBatch = null;
+        private INodeWriteBatch? _currentBatch = null;
 
         private readonly DirtyNodesCache _dirtyNodes;
 
@@ -192,10 +149,18 @@ namespace Nethermind.Trie.Pruning
             IKeyValueStoreWithBatching? keyValueStore,
             IPruningStrategy? pruningStrategy,
             IPersistenceStrategy? persistenceStrategy,
+            ILogManager? logManager) : this(new NodeStorage(keyValueStore), pruningStrategy, persistenceStrategy, logManager)
+        {
+        }
+
+        public TrieStore(
+            INodeStorage? nodeStorage,
+            IPruningStrategy? pruningStrategy,
+            IPersistenceStrategy? persistenceStrategy,
             ILogManager? logManager)
         {
             _logger = logManager?.GetClassLogger<TrieStore>() ?? throw new ArgumentNullException(nameof(logManager));
-            _keyValueStore = keyValueStore ?? throw new ArgumentNullException(nameof(keyValueStore));
+            _nodeStorage = nodeStorage ?? throw new ArgumentNullException(nameof(nodeStorage));
             _pruningStrategy = pruningStrategy ?? throw new ArgumentNullException(nameof(pruningStrategy));
             _persistenceStrategy = persistenceStrategy ?? throw new ArgumentNullException(nameof(persistenceStrategy));
             _dirtyNodes = new DirtyNodesCache(this);
@@ -376,158 +341,10 @@ namespace Nethermind.Trie.Pruning
 
         public event EventHandler<ReorgBoundaryReached>? ReorgBoundaryReached;
 
-        /*
-        public static byte[] GetNodeStoragePath(Hash256? address, TreePath path, ValueHash256 keccak)
+        public byte[] LoadRlp(Hash256? address, TreePath path, Hash256 keccak, INodeStorage? nodeStorage, ReadFlags readFlags = ReadFlags.None)
         {
-            byte[] pathBytes = new byte[40];
-
-            if (address != null)
-            {
-                // If address is null, we assume all are zero. So account tree should be in one place.
-                address.Bytes[..4].CopyTo(pathBytes.AsSpan());
-            }
-
-            // Node, this assume Path is zeroed
-            path.Path.BytesAsSpan[..4].CopyTo(pathBytes.AsSpan()[4..]);
-            keccak.Bytes.CopyTo(pathBytes.AsSpan()[8..]);
-
-            return pathBytes;
-        }
-        */
-        private static int _pathScheme = int.Parse(Environment.GetEnvironmentVariable("PATH_SCHEME") ?? "2");
-
-        public static byte[] GetNodeStoragePath(Hash256? address, TreePath path, ValueHash256 keccak)
-        {
-            byte[] pathBytes = new byte[40];
-            Span<byte> pathSpan = pathBytes;
-
-            if (_pathScheme == 0)
-            {
-                if (address != null)
-                {
-                    address.Bytes[..4].CopyTo(pathSpan);
-                    // Node, this assume Path is zeroed
-                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
-                } else {
-                    // I guess we don't actually need 8 byte. 6 byte should be ok enough.
-                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
-                }
-            }
-            else if (_pathScheme == 1)
-            {
-                if (address != null)
-                {
-                    address.Bytes[..4].CopyTo(pathSpan);
-                    // Node, this assume Path is zeroed
-                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
-                } else {
-                    // Whole path
-                    path.Path.BytesAsSpan[..8].CopyTo(pathSpan);
-                }
-            }
-            else
-            {
-                if (address != null)
-                {
-                    address.Bytes[..4].CopyTo(pathSpan[1..]);
-                    // Node, this assume Path is zeroed
-                    path.Path.BytesAsSpan[..3].CopyTo(pathSpan[5..]);
-                } else {
-                    // I guess we don't actually need 8 byte. 6 byte should be ok enough.
-                    path.Path.BytesAsSpan[..4].CopyTo(pathSpan[4..]);
-                }
-
-                // Attempt to split the tree into ranges trie level. This is so that the higher level would have some
-                // cache hit.
-                // 99p of length is 8.
-                if (_pathScheme == 2)
-                {
-                    // 99p of length is 8.
-                    if (path.Length <= 3)
-                    {
-                    }
-                    else if (path.Length <= 6)
-                    {
-                        pathBytes[0] = 1;
-                    }
-                    else
-                    {
-                        pathBytes[0] = 2;
-                    }
-                }
-                else if (_pathScheme == 3)
-                {
-                    // 99p of length is 8.
-                    if (path.Length <= 2)
-                    {
-                    }
-                    else if (path.Length <= 5)
-                    {
-                        pathBytes[0] = 1;
-                    }
-                    else
-                    {
-                        pathBytes[0] = 2;
-                    }
-                }
-                else
-                {
-                    if (path.Length <= 4)
-                    {
-                    }
-                    else
-                    {
-                        pathBytes[0] = 2;
-                    }
-                }
-            }
-
-            keccak.Bytes.CopyTo(pathBytes.AsSpan()[8..]);
-
-            return pathBytes;
-        }
-
-        public byte[] LoadRlp(Hash256? address, TreePath path, Hash256 keccak, IKeyValueStore? keyValueStore, ReadFlags readFlags = ReadFlags.None)
-        {
-            keyValueStore ??= _keyValueStore;
-            byte[]? rlp = keyValueStore.Get(GetNodeStoragePath(address, path, keccak), readFlags);
-            /*
-            if (rlp == null)
-            {
-                Console.Out.WriteLine($"Missing key was cached {KeyCached.Contains(new PruneKey(address, path, keccak))}");
-                Console.Out.WriteLine($"Missing key in cache {_dirtyNodes.IsNodeCached(new PruneKey(address, path, keccak))}");
-                Console.Out.WriteLine($"Missing key was removed {RemovedKey.GetValueOrDefault(new PruneKey(address, path, keccak), "not removed")}");
-                Console.Out.WriteLine($"Missing key was persisted {Persisted.Contains(new PruneKey(address, path, keccak))}");
-
-                byte[] thePath = GetNodeStoragePath(address, path, keccak);
-                bool found = false;
-
-                if (keyValueStore is IDb)
-                {
-                    IDb mem = (IDb)keyValueStore;
-                    foreach (var entry in mem.GetAll())
-                    {
-                        var memKey = entry.Key;
-                        if (Bytes.EqualityComparer.Equals(thePath[8..], memKey[8..]))
-                        {
-                            Console.Out.WriteLine($"Found hash match {thePath.ToHexString()} {memKey.ToHexString()}");
-                            found = true;
-                        }
-                        else
-                        if (Bytes.EqualityComparer.Equals(thePath[8..], memKey))
-                        {
-                            Console.Out.WriteLine($"Found hash match direct {thePath.ToHexString()} {memKey.ToHexString()}");
-                            found = true;
-                        }
-                    }
-                }
-
-                if (!found)
-                {
-                    Console.Out.WriteLine($"No key match {address} {path} {thePath[8..].ToHexString()} {thePath.ToHexString()}");
-                }
-            }
-            */
+            nodeStorage ??= _nodeStorage;
+            byte[]? rlp = nodeStorage.Get(address, path, keccak, readFlags);
 
             if (rlp is null)
             {
@@ -546,7 +363,7 @@ namespace Nethermind.Trie.Pruning
 
         public bool IsPersisted(Hash256? address, TreePath path, in ValueHash256 keccak)
         {
-            byte[]? rlp = _keyValueStore[TrieStore.GetNodeStoragePath(address, path, keccak)];
+            byte[]? rlp = _nodeStorage.Get(address, path, keccak, ReadFlags.None);
 
             if (rlp is null)
             {
@@ -764,7 +581,7 @@ namespace Nethermind.Trie.Pruning
 
         #region Private
 
-        protected readonly IKeyValueStoreWithBatching _keyValueStore;
+        protected readonly INodeStorage _nodeStorage;
 
         private readonly IPruningStrategy _pruningStrategy;
 
@@ -832,7 +649,7 @@ namespace Nethermind.Trie.Pruning
 
             try
             {
-                _currentBatch ??= _keyValueStore.StartWriteBatch();
+                _currentBatch ??= _nodeStorage.StartWriteBatch();
                 if (_logger.IsDebug) _logger.Debug($"Persisting from root {commitSet.Root} in {commitSet.BlockNumber}");
 
                 Stopwatch stopwatch = Stopwatch.StartNew();
@@ -856,7 +673,7 @@ namespace Nethermind.Trie.Pruning
                             {
                                 // Note: The path need to be collision resistant enough that we can't have two path
                                 // using the same hash.
-                                _currentBatch?.Remove(GetNodeStoragePath(address, path, persistedHash));
+                                _currentBatch?.Remove(address, path, persistedHash);
                             }
                         }
                     }
@@ -883,7 +700,7 @@ namespace Nethermind.Trie.Pruning
 
         private void Persist(Hash256? address, TreePath path, TrieNode currentNode, long blockNumber, WriteFlags writeFlags = WriteFlags.None)
         {
-            _currentBatch ??= _keyValueStore.StartWriteBatch();
+            _currentBatch ??= _nodeStorage.StartWriteBatch();
             if (currentNode is null)
             {
                 throw new ArgumentNullException(nameof(currentNode));
@@ -898,7 +715,7 @@ namespace Nethermind.Trie.Pruning
                 // to prevent it from being removed from cache and also want to have it persisted.
 
                 if (_logger.IsTrace) _logger.Trace($"Persisting {nameof(TrieNode)} {currentNode} in snapshot {blockNumber}.");
-                _currentBatch.Set(GetNodeStoragePath(address, path, currentNode.Keccak), currentNode.FullRlp.ToArray(), writeFlags);
+                _currentBatch.Set(address, path, currentNode.Keccak, currentNode.FullRlp.ToArray(), writeFlags);
                 currentNode.IsPersisted = true;
                 currentNode.LastSeen = Math.Max(blockNumber, currentNode.LastSeen ?? 0);
                 PersistedNodesCount++;
@@ -1028,7 +845,7 @@ namespace Nethermind.Trie.Pruning
 
         #endregion
 
-        public void PersistCache(IKeyValueStore store, CancellationToken cancellationToken)
+        public void PersistCache(INodeStorage store, CancellationToken cancellationToken)
         {
             Task.Run(() =>
             {
@@ -1041,7 +858,7 @@ namespace Nethermind.Trie.Pruning
                     Hash256? hash = n.Keccak;
                     if (hash is not null)
                     {
-                        store.Set(GetNodeStoragePath(address, path, hash), n.FullRlp.ToArray());
+                        store.Set(address, path, hash, n.FullRlp.ToArray(), WriteFlags.None);
                         int persistedNodesCount = Interlocked.Increment(ref persistedNodes);
                         if (_logger.IsInfo && persistedNodesCount % million == 0)
                         {
@@ -1073,7 +890,7 @@ namespace Nethermind.Trie.Pruning
                    && entry.Item3.NodeType != NodeType.Unknown
                    && entry.Item3.FullRlp.IsNotNull
                 ? entry.Item3.FullRlp.ToArray()
-                : _keyValueStore.Get(key, flags);
+                : _nodeStorage.GetByHash(key, flags);
         }
 
         public IKeyValueStore AsKeyValueStore(Hash256? address)

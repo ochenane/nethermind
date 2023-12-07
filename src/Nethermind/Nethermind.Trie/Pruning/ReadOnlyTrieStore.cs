@@ -13,12 +13,12 @@ namespace Nethermind.Trie.Pruning
     public class ReadOnlyTrieStore : IReadOnlyTrieStore
     {
         private readonly TrieStore _trieStore;
-        private readonly IKeyValueStore? _readOnlyStore;
+        private readonly NodeStorage? _readOnlyStore;
 
         public ReadOnlyTrieStore(TrieStore trieStore, IKeyValueStore? readOnlyStore)
         {
             _trieStore = trieStore ?? throw new ArgumentNullException(nameof(trieStore));
-            _readOnlyStore = readOnlyStore;
+            _readOnlyStore = readOnlyStore != null ? new NodeStorage(readOnlyStore) : null;
         }
 
         public TrieNode FindCachedOrUnknown(Hash256? address, TreePath treePath, Hash256 hash) =>
