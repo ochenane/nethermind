@@ -63,10 +63,8 @@ namespace Nethermind.Db
                 RegisterCustomColumnDb(DbNames.Receipts, () => new ReadOnlyColumnsDb<ReceiptsColumns>(new MemColumnsDb<ReceiptsColumns>(), false));
             }
             RegisterDb(BuildRocksDbSettings(DbNames.Metadata, () => Metrics.MetadataDbReads++, () => Metrics.MetadataDbWrites++));
-            if (useBlobsDb)
-            {
-                RegisterColumnsDb<BlobTxsColumns>(BuildRocksDbSettings(DbNames.BlobTransactions, () => Metrics.BlobTransactionsDbReads++, () => Metrics.BlobTransactionsDbWrites++));
-            }
+
+            RegisterColumnsDb<BlobTxsColumns>(BuildRocksDbSettings(DbNames.BlobTransactions, () => Metrics.BlobTransactionsDbReads++, () => Metrics.BlobTransactionsDbWrites++));
         }
 
         private RocksDbSettings BuildRocksDbSettings(string dbName, Action updateReadsMetrics, Action updateWriteMetrics, bool deleteOnStart = false)
