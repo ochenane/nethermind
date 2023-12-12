@@ -25,7 +25,7 @@ env:
 jobs:
   nethermind-tests:
     name: Run ${{ matrix.project }}
-    runs-on: ubuntu-latest-8core
+    runs-on: ubuntu-22.04-8core
     continue-on-error: true
     outputs:
       collect_coverage: ${{ env.COLLECT_COVERAGE }}
@@ -120,7 +120,7 @@ jobs:
 
   ethereum-tests:
     name: Run ${{ matrix.project }}
-    runs-on: ubuntu-latest-8core
+    runs-on: ubuntu-22.04-8core
     continue-on-error: true
     strategy:
       matrix:
