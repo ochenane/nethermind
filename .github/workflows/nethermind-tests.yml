@@ -25,7 +25,7 @@ env:
 jobs:
   nethermind-tests:
     name: Run ${{ matrix.project }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-large
     continue-on-error: true
     outputs:
       collect_coverage: ${{ env.COLLECT_COVERAGE }}
@@ -108,7 +108,7 @@ jobs:
   nethermind-tests-status:
     name: Nethermind tests
     needs: nethermind-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-large
     steps:
     - name: Download test outcomes
       uses: actions/download-artifact@v3
@@ -120,7 +120,7 @@ jobs:
 
   ethereum-tests:
     name: Run ${{ matrix.project }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-large
     continue-on-error: true
     strategy:
       matrix:
@@ -178,7 +178,7 @@ jobs:
   ethereum-tests-status:
     name: Ethereum tests
     needs: ethereum-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-large
     steps:
     - name: Download test outcomes
       uses: actions/download-artifact@v3
@@ -192,7 +192,7 @@ jobs:
     name: Upload Codecov reports
     needs: [nethermind-tests-status, ethereum-tests-status]
     if: needs.nethermind-tests.outputs.collect_coverage == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-large
     steps:
       - name: Download coverage reports
         uses: actions/download-artifact@v3
