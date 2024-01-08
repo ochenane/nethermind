@@ -31,8 +31,6 @@ namespace Nethermind.Runner.Ethereum
         {
             if (_logger.IsDebug) _logger.Debug("Initializing Ethereum");
 
-            // TODO: The steps loader filter the steps according to INethermindApi type.
-            // Probably have ISteps declared in Module instead so that they can be injected.
             EthereumStepsLoader stepsLoader = new EthereumStepsLoader(GetStepsAssemblies(_api));
             EthereumStepsManager stepsManager = new EthereumStepsManager(stepsLoader, _api, _api.LogManager);
             await stepsManager.InitializeAll(cancellationToken);

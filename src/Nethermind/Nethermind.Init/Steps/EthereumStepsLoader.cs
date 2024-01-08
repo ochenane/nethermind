@@ -32,8 +32,7 @@ namespace Nethermind.Init.Steps
             List<Type> allStepTypes = new List<Type>();
             foreach (Assembly stepsAssembly in _stepsAssemblies)
             {
-                allStepTypes.AddRange(stepsAssembly.GetExportedTypes()
-                    .Where(t => !t.IsInterface && !t.IsAbstract && IsStepType(t)));
+                allStepTypes.AddRange(stepsAssembly.GetExportedTypes().Where(IsStepType));
             }
 
             return allStepTypes
@@ -53,6 +52,12 @@ namespace Nethermind.Init.Steps
 
         private StepInfo? SelectImplementation(StepInfo[] stepsWithTheSameBase, Type apiType)
         {
+            // Some plugin (just Aura) replace some steps implementation. They are marked with having a constructor
+            // with a specific implementation of INethermindApi. This have priority.
+            // Nethermind.Consensus.AuRa.InitializationSteps.InitializeBlockchainAuRa
+            // Nethermind.Consensus.AuRa.InitializationSteps.LoadGenesisBlockAuRa
+            // Nethermind.Consensus.AuRa.InitializationSteps.StartBlockProcessorAuRa
+            // Until they are replaced, be careful not to remove INethermindApi from its constructor.
             StepInfo[] stepsWithMatchingApiType = stepsWithTheSameBase
                 .Where(t => HasConstructorWithParameter(t.StepType, apiType)).ToArray();
 
@@ -68,10 +73,15 @@ namespace Nethermind.Init.Steps
                 Array.Sort(stepsWithMatchingApiType, (t1, t2) => t1.StepType.IsAssignableFrom(t2.StepType) ? 1 : -1);
             }
 
+            if (stepsWithMatchingApiType.Length == 0)
+            {
+                stepsWithMatchingApiType = stepsWithTheSameBase;
+            }
+
             return stepsWithMatchingApiType.FirstOrDefault();
         }
 
-        private static bool IsStepType(Type t) => typeof(IStep).IsAssignableFrom(t);
+        private static bool IsStepType(Type t) => typeof(IStep).IsAssignableFrom(t) && !t.IsAbstract;
 
         private static Type GetStepBaseType(Type type)
         {
