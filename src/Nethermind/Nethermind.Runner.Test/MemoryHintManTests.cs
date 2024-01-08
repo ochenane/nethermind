@@ -40,18 +40,12 @@ namespace Nethermind.Runner.Test
             _txPoolConfig = new TxPoolConfig();
             _networkConfig = new NetworkConfig();
             _mallocHelper = Substitute.For<MallocHelper>();
-            _memoryHintMan = new MemoryHintMan(LimboLogs.Instance, _mallocHelper);
+            _memoryHintMan = new MemoryHintMan(LimboLogs.Instance, _initConfig, _dbConfig, _networkConfig, _syncConfig, _txPoolConfig, _mallocHelper);
         }
 
         private void SetMemoryAllowances(uint cpuCount)
         {
-            _memoryHintMan.SetMemoryAllowances(
-                _dbConfig,
-                _initConfig,
-                _networkConfig,
-                _syncConfig,
-                _txPoolConfig,
-                cpuCount);
+            _memoryHintMan.SetMemoryAllowances(cpuCount);
         }
 
         [TestCase(4 * GB, 2u, 4u, 11)]

@@ -409,14 +409,15 @@ namespace Nethermind.Runner.Test
         {
             foreach (TestConfigProvider configProvider in GetConfigProviders(configWildcard))
             {
-                MemoryHintMan memoryHintMan = new(LimboLogs.Instance);
-                memoryHintMan.SetMemoryAllowances(
-                    configProvider.GetConfig<IDbConfig>(),
+                MemoryHintMan memoryHintMan = new(
+                    LimboLogs.Instance,
                     configProvider.GetConfig<IInitConfig>(),
+                    configProvider.GetConfig<IDbConfig>(),
                     configProvider.GetConfig<INetworkConfig>(),
                     configProvider.GetConfig<ISyncConfig>(),
-                    configProvider.GetConfig<ITxPoolConfig>(),
-                    (uint)Environment.ProcessorCount);
+                    configProvider.GetConfig<ITxPoolConfig>()
+                );
+                memoryHintMan.SetMemoryAllowances((uint)Environment.ProcessorCount);
             }
         }
 

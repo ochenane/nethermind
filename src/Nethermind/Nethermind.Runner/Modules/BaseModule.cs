@@ -5,15 +5,18 @@ using System;
 using Autofac;
 using Autofac.Features.ResolveAnything;
 using Nethermind.Api;
+using Nethermind.Blockchain.Synchronization;
 using Nethermind.Config;
 using Nethermind.Consensus;
 using Nethermind.Core.Specs;
 using Nethermind.Core.Timers;
 using Nethermind.Crypto;
+using Nethermind.Db.Rocks.Config;
 using Nethermind.Logging;
 using Nethermind.Network.Config;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs.ChainSpecStyle;
+using Nethermind.TxPool;
 
 namespace Nethermind.Runner.Modules;
 
@@ -81,6 +84,9 @@ public class BaseModule : Module
         builder.Register<IConfigProvider, IBlocksConfig>((cp) => cp.GetConfig<IBlocksConfig>()).SingleInstance();
         builder.Register<IConfigProvider, IInitConfig>((cp) => cp.GetConfig<IInitConfig>()).SingleInstance();
         builder.Register<IConfigProvider, INetworkConfig>((cp) => cp.GetConfig<INetworkConfig>()).SingleInstance();
+        builder.Register<IConfigProvider, IDbConfig>((cp) => cp.GetConfig<IDbConfig>()).SingleInstance();
+        builder.Register<IConfigProvider, ISyncConfig>((cp) => cp.GetConfig<ISyncConfig>()).SingleInstance();
+        builder.Register<IConfigProvider, ITxPoolConfig>((cp) => cp.GetConfig<ITxPoolConfig>()).SingleInstance();
     }
 
     private void SetLoggerVariables(ChainSpec chainSpec, ILogManager logManager)

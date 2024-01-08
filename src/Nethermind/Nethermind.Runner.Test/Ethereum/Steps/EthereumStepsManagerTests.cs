@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Features.ResolveAnything;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Nethermind.Api;
@@ -114,9 +115,16 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         }
 
         private static NethermindApi CreateNethermindApi() =>
-            new(Substitute.For<IContainer>());
+            new(CreateContainer());
         private static AuRaNethermindApi CreateAuraApi() =>
-            new(Substitute.For<IContainer>());
+            new(CreateContainer());
+
+        private static IContainer CreateContainer()
+        {
+            ContainerBuilder builder = new ContainerBuilder();
+            builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource());
+            return builder.Build();
+        }
     }
 
     public class StepLong : IStep

@@ -32,7 +32,7 @@ namespace Nethermind.Init.Steps
             List<Type> allStepTypes = new List<Type>();
             foreach (Assembly stepsAssembly in _stepsAssemblies)
             {
-                allStepTypes.AddRange(stepsAssembly.GetExportedTypes().Where(IsStepType));
+                allStepTypes.AddRange(stepsAssembly.GetExportedTypes().Where((s) => IsStepType(s) && !s.IsAbstract));
             }
 
             return allStepTypes
@@ -81,7 +81,7 @@ namespace Nethermind.Init.Steps
             return stepsWithMatchingApiType.FirstOrDefault();
         }
 
-        private static bool IsStepType(Type t) => typeof(IStep).IsAssignableFrom(t) && !t.IsAbstract;
+        private static bool IsStepType(Type t) => typeof(IStep).IsAssignableFrom(t);
 
         private static Type GetStepBaseType(Type type)
         {
