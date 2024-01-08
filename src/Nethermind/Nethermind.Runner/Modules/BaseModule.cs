@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Autofac;
+using Autofac.Core;
+using Autofac.Core.Activators.Delegate;
+using Autofac.Core.Lifetime;
+using Autofac.Core.Registration;
 using Autofac.Features.ResolveAnything;
 using Nethermind.Api;
 using Nethermind.Blockchain.Synchronization;
@@ -50,6 +56,7 @@ public class BaseModule : Module
         base.Load(builder);
 
         builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource());
+        builder.RegisterSource(new ConfigRegistrationSource(_configProvider));
         builder.RegisterInstance(_configProvider);
         builder.RegisterInstance(_processExitSource);
         builder.RegisterInstance(_chainSpec);
@@ -72,21 +79,8 @@ public class BaseModule : Module
             .As<INethermindApi>()
             .SingleInstance();
 
-        builder.RegisterInstance(Core.Timers.TimerFactory.Default)
+        builder.RegisterInstance(TimerFactory.Default)
             .As<ITimerFactory>();
-
-        RegisterConfigs(builder);
-    }
-
-    private void RegisterConfigs(ContainerBuilder builder)
-    {
-        // TODO: Can't this be done automatically?
-        builder.Register<IConfigProvider, IBlocksConfig>((cp) => cp.GetConfig<IBlocksConfig>()).SingleInstance();
-        builder.Register<IConfigProvider, IInitConfig>((cp) => cp.GetConfig<IInitConfig>()).SingleInstance();
-        builder.Register<IConfigProvider, INetworkConfig>((cp) => cp.GetConfig<INetworkConfig>()).SingleInstance();
-        builder.Register<IConfigProvider, IDbConfig>((cp) => cp.GetConfig<IDbConfig>()).SingleInstance();
-        builder.Register<IConfigProvider, ISyncConfig>((cp) => cp.GetConfig<ISyncConfig>()).SingleInstance();
-        builder.Register<IConfigProvider, ITxPoolConfig>((cp) => cp.GetConfig<ITxPoolConfig>()).SingleInstance();
     }
 
     private void SetLoggerVariables(ChainSpec chainSpec, ILogManager logManager)
@@ -96,4 +90,39 @@ public class BaseModule : Module
         logManager.SetGlobalVariable("engine", chainSpec.SealEngineType);
     }
 
+    /// <summary>
+    /// Dynamically resolve IConfig<T>
+    /// </summary>
+    private class ConfigRegistrationSource: IRegistrationSource
+    {
+        private readonly IConfigProvider _configProvider;
+
+        internal ConfigRegistrationSource(IConfigProvider configProvider)
+        {
+            _configProvider = configProvider;
+        }
+        public IEnumerable<IComponentRegistration> RegistrationsFor(Service service, Func<Service, IEnumerable<ServiceRegistration>> registrationAccessor)
+        {
+            IServiceWithType swt = service as IServiceWithType;
+            if(swt == null || !typeof(IConfig).IsAssignableFrom(swt.ServiceType))
+            {
+                // It's not a request for the base handler type, so skip it.
+                return Enumerable.Empty<IComponentRegistration>();
+            }
+
+            // Dynamically resolve IConfig
+            ComponentRegistration registration = new ComponentRegistration(
+                Guid.NewGuid(),
+                new DelegateActivator(swt.ServiceType, (c, p) => _configProvider.GetConfig(swt.ServiceType)),
+                new RootScopeLifetime(),
+                InstanceSharing.Shared,
+                InstanceOwnership.OwnedByLifetimeScope,
+                new [] { service },
+                new Dictionary<string, object>());
+
+            return new IComponentRegistration[] { registration };
+        }
+
+        public bool IsAdapterForIndividualComponents => false;
+    }
 }

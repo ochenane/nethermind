@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: 2022 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using System;
+using Autofac.Core;
+
 namespace Nethermind.Config
 {
     public interface IConfigProvider
@@ -11,6 +14,11 @@ namespace Nethermind.Config
         /// <typeparam name="T">Type of the configuration interface.</typeparam>
         /// <returns>The configuration object.</returns>
         T GetConfig<T>() where T : IConfig;
+
+        /// <summary>
+        /// Same as its overload, but not generic.
+        /// </summary>
+        object GetConfig(Type t);
 
         /// <summary>
         /// Gets the value exactly in the format of the configuration data source.
