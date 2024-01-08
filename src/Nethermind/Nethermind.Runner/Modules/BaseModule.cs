@@ -3,6 +3,7 @@
 
 using System;
 using Autofac;
+using Autofac.Features.ResolveAnything;
 using Nethermind.Api;
 using Nethermind.Config;
 using Nethermind.Consensus;
@@ -45,6 +46,7 @@ public class BaseModule : Module
     {
         base.Load(builder);
 
+        builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource());
         builder.RegisterInstance(_configProvider);
         builder.RegisterInstance(_processExitSource);
         builder.RegisterInstance(_chainSpec);

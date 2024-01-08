@@ -9,6 +9,7 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
 using Nethermind.Api;
 using Nethermind.Core.Extensions;
 using Nethermind.Logging;
@@ -192,7 +193,7 @@ namespace Nethermind.Init.Steps
             IStep? step = null;
             try
             {
-                step = Activator.CreateInstance(stepInfo.StepType, _api) as IStep;
+                step = (IStep)_api.BaseContainer.Resolve(stepInfo.StepType);
             }
             catch (Exception e)
             {
