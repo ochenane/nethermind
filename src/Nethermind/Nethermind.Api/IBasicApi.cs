@@ -18,6 +18,7 @@ using Nethermind.KeyStore;
 using Nethermind.Logging;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs.ChainSpecStyle;
+using Nethermind.Stats;
 using Nethermind.Synchronization;
 using Nethermind.Synchronization.ParallelSync;
 
@@ -40,7 +41,6 @@ namespace Nethermind.Api
         ISyncModeSelector SyncModeSelector { get; set; }
         IBetterPeerStrategy? BetterPeerStrategy { get; set; }
         ITimestamper Timestamper { get; }
-        ITimerFactory TimerFactory { get; }
 
         // TODO: Eventually, no part should use this
         ILifetimeScope BaseContainer { get; }
@@ -56,6 +56,8 @@ namespace Nethermind.Api
         IConfigProvider ConfigProvider => BaseContainer.Resolve<IConfigProvider>();
         ILogManager LogManager => BaseContainer.Resolve<ILogManager>();
         IJsonSerializer EthereumJsonSerializer => BaseContainer.Resolve<IJsonSerializer>();
+        ITimerFactory TimerFactory => BaseContainer.Resolve<ITimerFactory>();
+        INodeStatsManager NodeStatsManager => BaseContainer.Resolve<INodeStatsManager>();
 
         public IConsensusPlugin? GetConsensusPlugin() =>
             Plugins

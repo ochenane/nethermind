@@ -43,9 +43,9 @@ using Nethermind.TxPool;
 using Nethermind.Wallet;
 using Nethermind.Sockets;
 using Nethermind.Specs;
-using Nethermind.Synchronization.SnapSync;
 using NSubstitute;
 using Nethermind.Blockchain.Blocks;
+using Nethermind.Core.Timers;
 
 namespace Nethermind.Runner.Test.Ethereum
 {
@@ -59,6 +59,8 @@ namespace Nethermind.Runner.Test.Ethereum
             containerBuilder.RegisterInstance(Substitute.For<ISpecProvider>()).As<ISpecProvider>();
             containerBuilder.RegisterInstance(Substitute.For<IProcessExitSource>()).As<IProcessExitSource>();
             containerBuilder.RegisterInstance(Substitute.For<IGasLimitCalculator>()).As<IGasLimitCalculator>();
+            containerBuilder.RegisterInstance(Substitute.For<INodeStatsManager>()).As<INodeStatsManager>();
+            containerBuilder.RegisterInstance(Substitute.For<ITimerFactory>()).As<ITimerFactory>();
             containerBuilder.RegisterInstance(new ChainSpec());
 
             var api = new NethermindApi(containerBuilder.Build())
@@ -106,7 +108,6 @@ namespace Nethermind.Runner.Test.Ethereum
                 TxSender = Substitute.For<ITxSender>(),
                 BlockProcessingQueue = Substitute.For<IBlockProcessingQueue>(),
                 EngineSignerStore = Substitute.For<ISignerStore>(),
-                NodeStatsManager = Substitute.For<INodeStatsManager>(),
                 RpcModuleProvider = Substitute.For<IRpcModuleProvider>(),
                 SyncModeSelector = Substitute.For<ISyncModeSelector>(),
                 SyncPeerPool = Substitute.For<ISyncPeerPool>(),

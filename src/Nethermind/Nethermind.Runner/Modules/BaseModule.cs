@@ -7,8 +7,10 @@ using Nethermind.Api;
 using Nethermind.Config;
 using Nethermind.Consensus;
 using Nethermind.Core.Specs;
+using Nethermind.Core.Timers;
 using Nethermind.Crypto;
 using Nethermind.Logging;
+using Nethermind.Network.Config;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs.ChainSpecStyle;
 
@@ -65,14 +67,18 @@ public class BaseModule : Module
             .As<INethermindApi>()
             .SingleInstance();
 
+        builder.RegisterInstance(Core.Timers.TimerFactory.Default)
+            .As<ITimerFactory>();
+
         RegisterConfigs(builder);
     }
 
     private void RegisterConfigs(ContainerBuilder builder)
     {
         // TODO: Can't this be done automatically?
-        builder.Register<IConfigProvider, IBlocksConfig>((configProvider) => configProvider.GetConfig<IBlocksConfig>()).SingleInstance();
-        builder.Register<IConfigProvider, IInitConfig>((configProvider) => configProvider.GetConfig<IInitConfig>()).SingleInstance();
+        builder.Register<IConfigProvider, IBlocksConfig>((cp) => cp.GetConfig<IBlocksConfig>()).SingleInstance();
+        builder.Register<IConfigProvider, IInitConfig>((cp) => cp.GetConfig<IInitConfig>()).SingleInstance();
+        builder.Register<IConfigProvider, INetworkConfig>((cp) => cp.GetConfig<INetworkConfig>()).SingleInstance();
     }
 
     private void SetLoggerVariables(ChainSpec chainSpec, ILogManager logManager)
