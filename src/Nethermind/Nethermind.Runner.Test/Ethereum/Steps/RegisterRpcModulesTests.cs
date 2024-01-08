@@ -24,7 +24,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         {
             JsonRpcConfig jsonRpcConfig = new() { Enabled = true };
 
-            NethermindApi context = Build.ContextWithMocks();
+            INethermindApi context = Build.ContextWithMocks();
             context.ConfigProvider.GetConfig<IJsonRpcConfig>().Returns(jsonRpcConfig);
 
             RegisterRpcModules registerRpcModules = new(context);
@@ -38,7 +38,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         {
             JsonRpcConfig jsonRpcConfig = new() { Enabled = false };
 
-            NethermindApi context = Build.ContextWithMocks();
+            INethermindApi context = Build.ContextWithMocks();
             context.ConfigProvider.GetConfig<IJsonRpcConfig>().Returns(jsonRpcConfig);
             context.RpcModuleProvider.Enabled.Returns(Array.Empty<string>());
 

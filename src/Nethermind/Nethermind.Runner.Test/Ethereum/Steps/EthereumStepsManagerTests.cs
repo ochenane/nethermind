@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Nethermind.Api;
@@ -13,6 +14,7 @@ using Nethermind.Init.Steps;
 using Nethermind.Logging;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs.ChainSpecStyle;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace Nethermind.Runner.Test.Ethereum.Steps
@@ -112,9 +114,9 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         }
 
         private static NethermindApi CreateNethermindApi() =>
-            new(new ConfigProvider(), new EthereumJsonSerializer(), LimboLogs.Instance, new ChainSpec());
+            new(Substitute.For<IContainer>());
         private static AuRaNethermindApi CreateAuraApi() =>
-            new(new ConfigProvider(), new EthereumJsonSerializer(), LimboLogs.Instance, new ChainSpec());
+            new(Substitute.For<IContainer>());
     }
 
     public class StepLong : IStep

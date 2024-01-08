@@ -3,15 +3,13 @@
 
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Core;
 using Nethermind.Api;
 using Nethermind.Api.Extensions;
-using Nethermind.Config;
 using Nethermind.Consensus.AuRa.InitializationSteps;
 using Nethermind.Consensus.Producers;
 using Nethermind.Consensus.Transactions;
-using Nethermind.Logging;
-using Nethermind.Serialization.Json;
-using Nethermind.Specs.ChainSpecStyle;
 
 [assembly: InternalsVisibleTo("Nethermind.Merge.AuRa")]
 
@@ -57,7 +55,7 @@ namespace Nethermind.Consensus.AuRa
         {
             if (_nethermindApi is not null)
             {
-                _nethermindApi.BetterPeerStrategy = new AuRaBetterPeerStrategy(_nethermindApi.BetterPeerStrategy!, _nethermindApi.LogManager);
+                _nethermindApi.BetterPeerStrategy = new AuRaBetterPeerStrategy(_nethermindApi.BetterPeerStrategy!, ((INethermindApi)_nethermindApi).LogManager);
             }
 
             return Task.CompletedTask;
@@ -77,9 +75,34 @@ namespace Nethermind.Consensus.AuRa
 
         public IBlockProductionTrigger? DefaultBlockProductionTrigger { get; private set; }
 
-        public INethermindApi CreateApi(IConfigProvider configProvider, IJsonSerializer jsonSerializer,
-            ILogManager logManager, ChainSpec chainSpec) => new AuRaNethermindApi(configProvider, jsonSerializer, logManager, chainSpec);
-
         public bool ShouldRunSteps(INethermindApi api) => true;
+
+        public IModule? GetEarlyModule()
+        {
+            return new AuraModule();
+        }
+
+        private class AuraModule : Module
+        {
+            protected override void Load(ContainerBuilder builder)
+            {
+                base.Load(builder);
+
+                builder.RegisterType<AuRaNethermindApi>()
+                    .AsSelf()
+                    .As<INethermindApi>()
+                    .SingleInstance();
+
+                builder.RegisterDecorator<IGasLimitCalculator>((ctx, _, baseGasLimit) =>
+                {
+                    // So aura does a strange thing where the gas limit calculator is replaced later on. Not sure exactly
+                    // why gas limit calculator is normally declared very early on. In any case, since its gas limit
+                    // calculator is very complicated, it can't be resolved until more of the stack is migrated to DI.
+                    AuRaNethermindApi api = ctx.Resolve<AuRaNethermindApi>();
+                    if (api.AuraGasLimitCalculator != null) return api.AuraGasLimitCalculator;
+                    return baseGasLimit;
+                });
+            }
+        }
     }
 }

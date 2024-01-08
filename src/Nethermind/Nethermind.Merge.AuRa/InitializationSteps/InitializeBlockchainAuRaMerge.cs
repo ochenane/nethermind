@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2023 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using Nethermind.Api;
 using Nethermind.Consensus.AuRa;
 using Nethermind.Consensus.AuRa.InitializationSteps;
 using Nethermind.Consensus.Processing;
@@ -14,7 +15,7 @@ namespace Nethermind.Merge.AuRa.InitializationSteps
 {
     public class InitializeBlockchainAuRaMerge : InitializeBlockchainAuRa
     {
-        private readonly AuRaNethermindApi _api;
+        private readonly INethermindApi _api;
 
         public InitializeBlockchainAuRaMerge(AuRaNethermindApi api) : base(api)
         {

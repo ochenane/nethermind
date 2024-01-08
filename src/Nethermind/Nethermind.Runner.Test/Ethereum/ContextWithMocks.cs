@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System.IO.Abstractions;
+using Autofac;
 using Nethermind.Api;
 using Nethermind.Blockchain;
 using Nethermind.Blockchain.Filters;
@@ -52,8 +53,15 @@ namespace Nethermind.Runner.Test.Ethereum
     {
         public static NethermindApi ContextWithMocks()
         {
-            var api = new NethermindApi(Substitute.For<IConfigProvider>(), Substitute.For<IJsonSerializer>(), LimboLogs.Instance,
-                new ChainSpec())
+            var containerBuilder = new ContainerBuilder();
+            containerBuilder.RegisterInstance(Substitute.For<IConfigProvider>()).As<IConfigProvider>();
+            containerBuilder.RegisterInstance(Substitute.For<ILogManager>()).As<ILogManager>();
+            containerBuilder.RegisterInstance(Substitute.For<ISpecProvider>()).As<ISpecProvider>();
+            containerBuilder.RegisterInstance(Substitute.For<IProcessExitSource>()).As<IProcessExitSource>();
+            containerBuilder.RegisterInstance(Substitute.For<IGasLimitCalculator>()).As<IGasLimitCalculator>();
+            containerBuilder.RegisterInstance(new ChainSpec());
+
+            var api = new NethermindApi(containerBuilder.Build())
             {
                 Enode = Substitute.For<IEnode>(),
                 TxPool = Substitute.For<ITxPool>(),
@@ -63,7 +71,6 @@ namespace Nethermind.Runner.Test.Ethereum
                 DbProvider = TestMemDbProvider.Init(),
                 PeerManager = Substitute.For<IPeerManager>(),
                 PeerPool = Substitute.For<IPeerPool>(),
-                SpecProvider = Substitute.For<ISpecProvider>(),
                 EthereumEcdsa = Substitute.For<IEthereumEcdsa>(),
                 MainBlockProcessor = Substitute.For<IBlockProcessor>(),
                 ReceiptStorage = Substitute.For<IReceiptStorage>(),

@@ -3,6 +3,8 @@
 
 using System;
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Core;
 using Nethermind.Api;
 using Nethermind.Api.Extensions;
 using Nethermind.Blockchain;
@@ -135,8 +137,6 @@ namespace Nethermind.Consensus.Clique
                 getFromApi.LogManager,
                 txFilterPipeline);
 
-            IGasLimitCalculator gasLimitCalculator = setInApi.GasLimitCalculator = new TargetAdjustedGasLimitCalculator(getFromApi.SpecProvider, _blocksConfig);
-
             IBlockProducer blockProducer = new CliqueBlockProducer(
                 additionalTxSource.Then(txPoolTxSource),
                 chainProcessor,
@@ -146,7 +146,7 @@ namespace Nethermind.Consensus.Clique
                 getFromApi.CryptoRandom,
                 _snapshotManager!,
                 getFromApi.Sealer!,
-                gasLimitCalculator,
+                _nethermindApi!.GasLimitCalculator,
                 getFromApi.SpecProvider,
                 _cliqueConfig!,
                 getFromApi.LogManager);
@@ -192,5 +192,20 @@ namespace Nethermind.Consensus.Clique
         private ICliqueConfig? _cliqueConfig;
 
         private IBlocksConfig? _blocksConfig;
+        public IModule? GetEarlyModule()
+        {
+            return new CliqueModule();
+        }
+
+        private class CliqueModule : Module
+        {
+            protected override void Load(ContainerBuilder builder)
+            {
+                base.Load(builder);
+
+                builder.RegisterType<TargetAdjustedGasLimitCalculator>()
+                    .As<IGasLimitCalculator>();
+            }
+        }
     }
 }

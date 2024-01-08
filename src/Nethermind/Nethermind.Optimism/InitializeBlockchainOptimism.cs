@@ -17,19 +17,21 @@ namespace Nethermind.Optimism;
 
 public class InitializeBlockchainOptimism : InitializeBlockchain
 {
-    private readonly OptimismNethermindApi _api;
+    private readonly INethermindApi _api;
+    private readonly OptimismNethermindApi _opApi;
     private readonly IBlocksConfig _blocksConfig;
 
     public InitializeBlockchainOptimism(OptimismNethermindApi api) : base(api)
     {
         _api = api;
+        _opApi = api;
         _blocksConfig = api.Config<IBlocksConfig>();
     }
 
     protected override Task InitBlockchain()
     {
-        _api.SpecHelper = new(_api.ChainSpec.Optimism);
-        _api.L1CostHelper = new(_api.SpecHelper, _api.ChainSpec.Optimism.L1BlockAddress);
+        _opApi.SpecHelper = new(_api.ChainSpec.Optimism);
+        _opApi.L1CostHelper = new(_opApi.SpecHelper, _api.ChainSpec.Optimism.L1BlockAddress);
 
         return base.InitBlockchain();
     }
@@ -37,8 +39,8 @@ public class InitializeBlockchainOptimism : InitializeBlockchain
     protected override ITransactionProcessor CreateTransactionProcessor()
     {
         if (_api.SpecProvider is null) throw new StepDependencyException(nameof(_api.SpecProvider));
-        if (_api.SpecHelper is null) throw new StepDependencyException(nameof(_api.SpecHelper));
-        if (_api.L1CostHelper is null) throw new StepDependencyException(nameof(_api.L1CostHelper));
+        if (_opApi.SpecHelper is null) throw new StepDependencyException(nameof(_opApi.SpecHelper));
+        if (_opApi.L1CostHelper is null) throw new StepDependencyException(nameof(_opApi.L1CostHelper));
 
         VirtualMachine virtualMachine = CreateVirtualMachine();
 
@@ -47,14 +49,14 @@ public class InitializeBlockchainOptimism : InitializeBlockchain
             _api.WorldState,
             virtualMachine,
             _api.LogManager,
-            _api.L1CostHelper,
-            _api.SpecHelper
+            _opApi.L1CostHelper,
+            _opApi.SpecHelper
         );
     }
 
     protected override IHeaderValidator CreateHeaderValidator()
     {
-        if (_api.InvalidChainTracker is null) throw new StepDependencyException(nameof(_api.InvalidChainTracker));
+        if (_opApi.InvalidChainTracker is null) throw new StepDependencyException(nameof(_opApi.InvalidChainTracker));
 
         OptimismHeaderValidator opHeaderValidator = new(
             _api.BlockTree,
@@ -62,12 +64,12 @@ public class InitializeBlockchainOptimism : InitializeBlockchain
             _api.SpecProvider,
             _api.LogManager);
 
-        return new InvalidHeaderInterceptor(opHeaderValidator, _api.InvalidChainTracker, _api.LogManager);
+        return new InvalidHeaderInterceptor(opHeaderValidator, _opApi.InvalidChainTracker, _api.LogManager);
     }
 
     protected override IBlockValidator CreateBlockValidator()
     {
-        if (_api.InvalidChainTracker is null) throw new StepDependencyException(nameof(_api.InvalidChainTracker));
+        if (_opApi.InvalidChainTracker is null) throw new StepDependencyException(nameof(_opApi.InvalidChainTracker));
         if (_api.TxValidator is null) throw new StepDependencyException(nameof(_api.TxValidator));
 
         OptimismTxValidator txValidator = new(_api.TxValidator);
@@ -78,7 +80,7 @@ public class InitializeBlockchainOptimism : InitializeBlockchain
             _api.SpecProvider,
             _api.LogManager);
 
-        return new InvalidBlockInterceptor(blockValidator, _api.InvalidChainTracker, _api.LogManager);
+        return new InvalidBlockInterceptor(blockValidator, _opApi.InvalidChainTracker, _api.LogManager);
     }
 
     protected override BlockProcessor CreateBlockProcessor()
@@ -86,13 +88,13 @@ public class InitializeBlockchainOptimism : InitializeBlockchain
         if (_api.DbProvider is null) throw new StepDependencyException(nameof(_api.DbProvider));
         if (_api.RewardCalculatorSource is null) throw new StepDependencyException(nameof(_api.RewardCalculatorSource));
         if (_api.TransactionProcessor is null) throw new StepDependencyException(nameof(_api.TransactionProcessor));
-        if (_api.SpecHelper is null) throw new StepDependencyException(nameof(_api.SpecHelper));
+        if (_opApi.SpecHelper is null) throw new StepDependencyException(nameof(_opApi.SpecHelper));
         if (_api.SpecProvider is null) throw new StepDependencyException(nameof(_api.SpecProvider));
         if (_api.BlockTree is null) throw new StepDependencyException(nameof(_api.BlockTree));
         if (_api.WorldState is null) throw new StepDependencyException(nameof(_api.WorldState));
 
         Create2DeployerContractRewriter contractRewriter =
-            new(_api.SpecHelper, _api.SpecProvider, _api.BlockTree);
+            new(_opApi.SpecHelper, _api.SpecProvider, _api.BlockTree);
 
         return new OptimismBlockProcessor(
             _api.SpecProvider,
@@ -103,7 +105,7 @@ public class InitializeBlockchainOptimism : InitializeBlockchain
             _api.ReceiptStorage,
             _api.WitnessCollector,
             _api.LogManager,
-            _api.SpecHelper,
+            _opApi.SpecHelper,
             contractRewriter);
     }
 

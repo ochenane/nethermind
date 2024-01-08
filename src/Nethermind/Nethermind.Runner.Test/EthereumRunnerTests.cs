@@ -27,6 +27,7 @@ using Nethermind.TxPool;
 using NUnit.Framework;
 using LogLevel = NLog.LogLevel;
 using Nethermind.Serialization.Json;
+using NSubstitute;
 
 namespace Nethermind.Runner.Test
 {
@@ -122,7 +123,7 @@ namespace Nethermind.Runner.Test
                 networkConfig.P2PPort = port;
                 networkConfig.DiscoveryPort = port;
 
-                INethermindApi nethermindApi = new ApiBuilder(configProvider, LimboLogs.Instance).Create();
+                INethermindApi nethermindApi = new ApiBuilder(configProvider, Substitute.For<IProcessExitSource>(), LimboLogs.Instance).Create();
                 nethermindApi.RpcModuleProvider = new RpcModuleProvider(new FileSystem(), new JsonRpcConfig(), LimboLogs.Instance);
                 EthereumRunner runner = new(nethermindApi);
 

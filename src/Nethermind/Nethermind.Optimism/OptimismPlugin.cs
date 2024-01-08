@@ -21,13 +21,10 @@ using Nethermind.Merge.Plugin.InvalidChainTracker;
 using Nethermind.Blockchain;
 using Nethermind.Consensus.Rewards;
 using Nethermind.Merge.Plugin.Synchronization;
-using Nethermind.Synchronization.Reporting;
 using Nethermind.Synchronization.ParallelSync;
-using System.Threading;
+using Autofac;
+using Autofac.Core;
 using Nethermind.HealthChecks;
-using Nethermind.Serialization.Json;
-using Nethermind.Specs.ChainSpecStyle;
-using Nethermind.Trie.Pruning;
 
 namespace Nethermind.Optimism;
 
@@ -37,7 +34,8 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin, IInitial
     public string Name => "Optimism";
     public string Description => "Optimism support for Nethermind";
 
-    private OptimismNethermindApi? _api;
+    private INethermindApi? _api;
+    private OptimismNethermindApi? _optApi;
     private ILogger _logger = null!;
     private IMergeConfig _mergeConfig = null!;
     private ISyncConfig _syncConfig = null!;
@@ -72,16 +70,13 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin, IInitial
 
     #endregion
 
-    public INethermindApi CreateApi(IConfigProvider configProvider, IJsonSerializer jsonSerializer,
-        ILogManager logManager, ChainSpec chainSpec) =>
-        new OptimismNethermindApi(configProvider, jsonSerializer, logManager, chainSpec);
-
     public Task Init(INethermindApi api)
     {
         if (!ShouldRunSteps(api))
             return Task.CompletedTask;
 
-        _api = (OptimismNethermindApi)api;
+        _optApi = (OptimismNethermindApi)api;
+        _api = api;
         _mergeConfig = _api.Config<IMergeConfig>();
         _syncConfig = _api.Config<ISyncConfig>();
         _blocksConfig = _api.Config<IBlocksConfig>();
@@ -94,7 +89,7 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin, IInitial
 
         _blockCacheService = new BlockCacheService();
         _api.EthereumEcdsa = new OptimismEthereumEcdsa(_api.EthereumEcdsa);
-        _api.InvalidChainTracker = _invalidChainTracker = new InvalidChainTracker(
+        _optApi.InvalidChainTracker = _invalidChainTracker = new InvalidChainTracker(
             _api.PoSSwitcher,
             _api.BlockTree,
             _blockCacheService,
@@ -267,4 +262,25 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin, IInitial
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     public bool MustInitialize => true;
+
+    public IModule? GetEarlyModule()
+    {
+        return new OptimismModule();
+    }
+
+    private class OptimismModule : Module
+    {
+        protected override void Load(ContainerBuilder builder)
+        {
+            base.Load(builder);
+
+            builder.RegisterType<OptimismNethermindApi>()
+                .As<INethermindApi>()
+                .SingleInstance();
+
+            builder.RegisterType<OptimismGasLimitCalculator>()
+                .As<IGasLimitCalculator>()
+                .SingleInstance();
+        }
+    }
 }

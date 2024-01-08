@@ -6,16 +6,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Autofac;
+using Autofac.Core;
 using Nethermind.Api;
 using Nethermind.Api.Extensions;
 using Nethermind.Config;
-using Nethermind.Consensus;
 using Nethermind.Core;
 using Nethermind.JsonRpc.Data;
 using Nethermind.Logging;
+using Nethermind.Runner.Modules;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs.ChainSpecStyle;
-using ILogger = Nethermind.Logging.ILogger;
 
 namespace Nethermind.Runner.Ethereum.Api
 {
@@ -23,12 +24,15 @@ namespace Nethermind.Runner.Ethereum.Api
     {
         private readonly IConfigProvider _configProvider;
         private readonly IJsonSerializer _jsonSerializer;
+        private readonly IProcessExitSource _processExitSource;
         private readonly ILogManager _logManager;
         private readonly ILogger _logger;
         private readonly IInitConfig _initConfig;
 
-        public ApiBuilder(IConfigProvider configProvider, ILogManager logManager)
+        public ApiBuilder(IConfigProvider configProvider, IProcessExitSource processExitSource, ILogManager logManager)
         {
+            _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
+            _processExitSource = processExitSource ?? throw new ArgumentNullException(nameof(processExitSource));
             _logManager = logManager ?? throw new ArgumentNullException(nameof(logManager));
             _logger = _logManager.GetClassLogger();
             _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
@@ -51,16 +55,17 @@ namespace Nethermind.Runner.Ethereum.Api
             string engine = chainSpec.SealEngineType;
             IConsensusPlugin? enginePlugin = consensusPlugins.FirstOrDefault(p => p.SealEngineType == engine);
 
-            INethermindApi nethermindApi =
-                enginePlugin?.CreateApi(_configProvider, _jsonSerializer, _logManager, chainSpec) ??
-                new NethermindApi(_configProvider, _jsonSerializer, _logManager, chainSpec);
-            nethermindApi.SealEngineType = engine;
-            nethermindApi.SpecProvider = new ChainSpecBasedSpecProvider(chainSpec, _logManager);
-            nethermindApi.GasLimitCalculator = new FollowOtherMiners(nethermindApi.SpecProvider);
-
-            SetLoggerVariables(chainSpec);
-
-            return nethermindApi;
+            ContainerBuilder containerBuilder = new ContainerBuilder();
+            containerBuilder.RegisterModule(new BaseModule(
+                _configProvider,
+                _processExitSource,
+                chainSpec,
+                _jsonSerializer,
+                _logManager
+            ));
+            IModule? consensusModule = enginePlugin?.GetEarlyModule();
+            if (consensusModule != null) containerBuilder.RegisterModule(consensusModule);
+            return containerBuilder.Build().Resolve<INethermindApi>();
         }
 
         private int _apiCreated;
@@ -84,13 +89,6 @@ namespace Nethermind.Runner.Ethereum.Api
             ChainSpec chainSpec = loader.LoadEmbeddedOrFromFile(chainSpecFile, _logger);
             TransactionForRpc.DefaultChainId = chainSpec.ChainId;
             return chainSpec;
-        }
-
-        private void SetLoggerVariables(ChainSpec chainSpec)
-        {
-            _logManager.SetGlobalVariable("chain", chainSpec.Name);
-            _logManager.SetGlobalVariable("chainId", chainSpec.ChainId);
-            _logManager.SetGlobalVariable("engine", chainSpec.SealEngineType);
         }
     }
 }

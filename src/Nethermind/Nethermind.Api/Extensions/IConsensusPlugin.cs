@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Core;
 using Nethermind.Config;
 using Nethermind.Consensus;
 using Nethermind.Consensus.Producers;
@@ -36,7 +38,14 @@ namespace Nethermind.Api.Extensions
         /// </remarks>
         IBlockProductionTrigger DefaultBlockProductionTrigger { get; }
 
-        INethermindApi CreateApi(IConfigProvider configProvider, IJsonSerializer jsonSerializer,
-            ILogManager logManager, ChainSpec chainSpec) => new NethermindApi(configProvider, jsonSerializer, logManager, chainSpec);
+        /// <summary>
+        /// Module that is registered before any steps was run.
+        /// TODO: This is probably AFTER default component was registered. Probably not needed so early on.
+        /// this will resolve itself after everything become dependency injected.
+        /// </summary>
+        IModule? GetEarlyModule()
+        {
+            return null;
+        }
     }
 }

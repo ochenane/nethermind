@@ -1,24 +1,21 @@
 // SPDX-FileCopyrightText: 2022 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using Autofac;
 using Nethermind.Api;
-using Nethermind.Config;
 using Nethermind.Consensus.AuRa.Contracts;
 using Nethermind.Consensus.AuRa.Transactions;
 using Nethermind.Consensus.AuRa.Validators;
 using Nethermind.Core.Caching;
 using Nethermind.Core.Crypto;
 using Nethermind.Int256;
-using Nethermind.Logging;
-using Nethermind.Serialization.Json;
-using Nethermind.Specs.ChainSpecStyle;
 
 namespace Nethermind.Consensus.AuRa.InitializationSteps
 {
     public class AuRaNethermindApi : NethermindApi
     {
-        public AuRaNethermindApi(IConfigProvider configProvider, IJsonSerializer jsonSerializer, ILogManager logManager, ChainSpec chainSpec)
-            : base(configProvider, jsonSerializer, logManager, chainSpec)
+        public AuRaNethermindApi(ILifetimeScope container)
+            : base(container)
         {
         }
 
@@ -43,5 +40,6 @@ namespace Nethermind.Consensus.AuRa.InitializationSteps
 
         public ReportingContractBasedValidator.Cache ReportingContractValidatorCache { get; } = new ReportingContractBasedValidator.Cache();
         public TxPriorityContract.LocalDataSource? TxPriorityContractLocalDataSource { get; set; }
+        public IGasLimitCalculator? AuraGasLimitCalculator { get; set; }
     }
 }

@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Autofac;
+using Nethermind.Api;
 using Nethermind.Blockchain.Synchronization;
 using Nethermind.Config;
 using Nethermind.Consensus;
@@ -27,6 +29,7 @@ using Nethermind.Merge.Plugin;
 using Nethermind.Merge.Plugin.BlockProduction;
 using Nethermind.Merge.Plugin.Handlers;
 using Nethermind.Merge.Plugin.Test;
+using Nethermind.Runner.Modules;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs;
 using Nethermind.Specs.ChainSpecStyle;
@@ -98,7 +101,10 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
 
         protected override IBlockProcessor CreateBlockProcessor()
         {
-            _api = new(new ConfigProvider(), new EthereumJsonSerializer(), LogManager,
+            ContainerBuilder containerBuilder = new ContainerBuilder();
+            containerBuilder.RegisterModule(new BaseModule(
+                new ConfigProvider(),
+                Substitute.For<IProcessExitSource>(),
                     new ChainSpec
                     {
                         AuRa = new()
@@ -106,17 +112,23 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
                             WithdrawalContractAddress = new("0xbabe2bed00000000000000000000000000000003")
                         },
                         Parameters = new()
-                    })
-            {
-                BlockTree = BlockTree,
-                DbProvider = DbProvider,
-                WorldStateManager = WorldStateManager,
-                SpecProvider = SpecProvider,
-                TransactionComparerProvider = TransactionComparerProvider,
-                TxPool = TxPool
-            };
+                    },
+                new EthereumJsonSerializer(),
+                LogManager
+            ));
+            containerBuilder.RegisterModule(new AuRaPlugin().GetEarlyModule()!);
+            containerBuilder.RegisterInstance(SpecProvider).As<ISpecProvider>();
+            IContainer container = containerBuilder.Build();
 
-            WithdrawalContractFactory withdrawalContractFactory = new(_api.ChainSpec!.AuRa, _api.AbiEncoder);
+            _api = container.Resolve<AuRaNethermindApi>();
+
+            _api.BlockTree = BlockTree;
+            _api.DbProvider = DbProvider;
+            _api.WorldStateManager = WorldStateManager;
+            _api.TransactionComparerProvider = TransactionComparerProvider;
+            _api.TxPool = TxPool;
+
+            WithdrawalContractFactory withdrawalContractFactory = new(((INethermindApi)_api).ChainSpec!.AuRa, _api.AbiEncoder);
             WithdrawalProcessor = new AuraWithdrawalProcessor(
                     withdrawalContractFactory.Create(TxProcessor),
                     LogManager

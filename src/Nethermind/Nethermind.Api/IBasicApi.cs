@@ -4,9 +4,11 @@
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
+using Autofac;
 using Nethermind.Abi;
 using Nethermind.Api.Extensions;
 using Nethermind.Config;
+using Nethermind.Consensus;
 using Nethermind.Core;
 using Nethermind.Core.Specs;
 using Nethermind.Core.Timers;
@@ -26,27 +28,34 @@ namespace Nethermind.Api
         DisposableStack DisposeStack { get; }
 
         IAbiEncoder AbiEncoder { get; }
-        ChainSpec ChainSpec { get; set; }
-        IConfigProvider ConfigProvider { get; set; }
-        ICryptoRandom CryptoRandom { get; }
         IDbProvider? DbProvider { get; set; }
         IRocksDbFactory? RocksDbFactory { get; set; }
         IMemDbFactory? MemDbFactory { get; set; }
         IEthereumEcdsa? EthereumEcdsa { get; set; }
-        IJsonSerializer EthereumJsonSerializer { get; set; }
         IFileSystem FileSystem { get; set; }
         IKeyStore? KeyStore { get; set; }
-        ILogManager LogManager { get; set; }
         ProtectedPrivateKey? OriginalSignerKey { get; set; }
         IReadOnlyList<INethermindPlugin> Plugins { get; }
-        string SealEngineType { get; set; }
-        ISpecProvider? SpecProvider { get; set; }
+        string SealEngineType { get; }
         ISyncModeSelector SyncModeSelector { get; set; }
-        ISyncProgressResolver? SyncProgressResolver { get; set; }
         IBetterPeerStrategy? BetterPeerStrategy { get; set; }
         ITimestamper Timestamper { get; }
         ITimerFactory TimerFactory { get; }
-        IProcessExitSource? ProcessExit { get; set; }
+
+        // TODO: Eventually, no part should use this
+        ILifetimeScope BaseContainer { get; }
+
+        // But these in the same place so that we can double check that its no longer used.
+        // Every time we migrate to dependency injection, always put it here so that we can keep track what can be
+        // removed. Eventually, there should not be any of these left.
+        IProcessExitSource? ProcessExit => BaseContainer.Resolve<IProcessExitSource>();
+        ISpecProvider? SpecProvider => BaseContainer.Resolve<ISpecProvider>();
+        ChainSpec ChainSpec => BaseContainer.Resolve<ChainSpec>();
+        ICryptoRandom CryptoRandom => BaseContainer.Resolve<ICryptoRandom>();
+        IGasLimitCalculator GasLimitCalculator => BaseContainer.Resolve<IGasLimitCalculator>();
+        IConfigProvider ConfigProvider => BaseContainer.Resolve<IConfigProvider>();
+        ILogManager LogManager => BaseContainer.Resolve<ILogManager>();
+        IJsonSerializer EthereumJsonSerializer => BaseContainer.Resolve<IJsonSerializer>();
 
         public IConsensusPlugin? GetConsensusPlugin() =>
             Plugins

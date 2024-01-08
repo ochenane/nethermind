@@ -1,9 +1,10 @@
 // SPDX-FileCopyrightText: 2022 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
-using System.Threading;
+using Autofac;
 using Nethermind.Abi;
 using Nethermind.Api.Extensions;
 using Nethermind.Blockchain;
@@ -23,7 +24,6 @@ using Nethermind.Consensus.Validators;
 using Nethermind.Core;
 using Nethermind.Core.Authentication;
 using Nethermind.Core.PubSub;
-using Nethermind.Core.Specs;
 using Nethermind.Core.Timers;
 using Nethermind.Crypto;
 using Nethermind.Db;
@@ -37,13 +37,10 @@ using Nethermind.JsonRpc.Modules;
 using Nethermind.JsonRpc.Modules.Eth.GasPrice;
 using Nethermind.JsonRpc.Modules.Subscribe;
 using Nethermind.KeyStore;
-using Nethermind.Logging;
 using Nethermind.Monitoring;
 using Nethermind.Network;
 using Nethermind.Network.P2P.Analyzers;
 using Nethermind.Network.Rlpx;
-using Nethermind.Serialization.Json;
-using Nethermind.Specs.ChainSpecStyle;
 using Nethermind.State;
 using Nethermind.State.Repositories;
 using Nethermind.Stats;
@@ -54,21 +51,16 @@ using Nethermind.Trie.Pruning;
 using Nethermind.TxPool;
 using Nethermind.Wallet;
 using Nethermind.Sockets;
-using Nethermind.Synchronization.SnapSync;
-using Nethermind.Synchronization.Blocks;
+using Nethermind.Specs.ChainSpecStyle;
 
 namespace Nethermind.Api
 {
     public class NethermindApi : INethermindApi
     {
-        public NethermindApi(IConfigProvider configProvider, IJsonSerializer jsonSerializer, ILogManager logManager, ChainSpec chainSpec)
+        public NethermindApi(ILifetimeScope container)
         {
-            ConfigProvider = configProvider;
-            EthereumJsonSerializer = jsonSerializer;
-            LogManager = logManager;
-            ChainSpec = chainSpec;
-            CryptoRandom = new CryptoRandom();
-            DisposeStack.Push(CryptoRandom);
+            BaseContainer = container;
+            DisposeStack.Push((IDisposable)container);
         }
 
         public IBlockchainBridge CreateBlockchainBridge()
@@ -79,11 +71,11 @@ namespace Nethermind.Api
             ReadOnlyTxProcessingEnv readOnlyTxProcessingEnv = new(
                 WorldStateManager!,
                 readOnlyTree,
-                SpecProvider,
-                LogManager);
+                ((INethermindApi)this).SpecProvider,
+                ((INethermindApi)this).LogManager);
 
-            IMiningConfig miningConfig = ConfigProvider.GetConfig<IMiningConfig>();
-            IBlocksConfig blocksConfig = ConfigProvider.GetConfig<IBlocksConfig>();
+            IMiningConfig miningConfig = ((INethermindApi)this).ConfigProvider.GetConfig<IMiningConfig>();
+            IBlocksConfig blocksConfig = ((INethermindApi)this).ConfigProvider.GetConfig<IBlocksConfig>();
 
             return new BlockchainBridge(
                 readOnlyTxProcessingEnv,
@@ -94,7 +86,7 @@ namespace Nethermind.Api
                 EthereumEcdsa,
                 Timestamper,
                 LogFinder,
-                SpecProvider!,
+                ((INethermindApi)this).SpecProvider!,
                 blocksConfig,
                 miningConfig.Enabled
             );
@@ -111,8 +103,6 @@ namespace Nethermind.Api
         public IBlockValidator? BlockValidator { get; set; }
         public IBloomStorage? BloomStorage { get; set; }
         public IChainLevelInfoRepository? ChainLevelInfoRepository { get; set; }
-        public IConfigProvider ConfigProvider { get; set; }
-        public ICryptoRandom CryptoRandom { get; }
         public IDbProvider? DbProvider { get; set; }
         public IRocksDbFactory? RocksDbFactory { get; set; }
         public IMemDbFactory? MemDbFactory { get; set; }
@@ -133,12 +123,8 @@ namespace Nethermind.Api
             new BuildBlocksWhenRequested();
 
         public IIPResolver? IpResolver { get; set; }
-        public IJsonSerializer EthereumJsonSerializer { get; set; }
         public IKeyStore? KeyStore { get; set; }
-        public IPasswordProvider? PasswordProvider { get; set; }
         public ILogFinder? LogFinder { get; set; }
-        public ILogManager LogManager { get; set; }
-        public IKeyValueStoreWithBatching? MainStateDbWithCache { get; set; }
         public IMessageSerializationService MessageSerializationService { get; } = new MessageSerializationService();
         public IGossipPolicy GossipPolicy { get; set; } = Policy.FullGossip;
         public IMonitoringService MonitoringService { get; set; } = NullMonitoringService.Instance;
@@ -158,7 +144,9 @@ namespace Nethermind.Api
         public IRpcAuthentication? RpcAuthentication { get; set; }
         public IJsonRpcLocalStats? JsonRpcLocalStats { get; set; }
         public ISealer? Sealer { get; set; } = NullSealEngine.Instance;
-        public string SealEngineType { get; set; } = Nethermind.Core.SealEngineType.None;
+
+        private string? _sealEngineType = null;
+        public string SealEngineType => _sealEngineType ??= ((INethermindApi)this).ChainSpec.SealEngineType;
         public ISealValidator? SealValidator { get; set; } = NullSealEngine.Instance;
         private ISealEngine? _sealEngine;
         public ISealEngine SealEngine
@@ -175,7 +163,6 @@ namespace Nethermind.Api
         }
 
         public ISessionMonitor? SessionMonitor { get; set; }
-        public ISpecProvider? SpecProvider { get; set; }
         public IPoSSwitcher PoSSwitcher { get; set; } = NoPoS.Instance;
         public ISyncModeSelector SyncModeSelector { get; set; } = null!;
 
@@ -203,8 +190,6 @@ namespace Nethermind.Api
         public IRpcCapabilitiesProvider? RpcCapabilitiesProvider { get; set; }
         public ITxValidator? TxValidator { get; set; }
         public IBlockFinalizationManager? FinalizationManager { get; set; }
-        public IGasLimitCalculator? GasLimitCalculator { get; set; }
-
         public IBlockProducerEnvFactory? BlockProducerEnvFactory { get; set; }
         public IGasPriceOracle? GasPriceOracle { get; set; }
 
@@ -223,12 +208,14 @@ namespace Nethermind.Api
         /// </summary>
         public ProtectedPrivateKey? OriginalSignerKey { get; set; }
 
-        public ChainSpec ChainSpec { get; set; }
+        // Note: when migrating to dependency injection, the component implementing `IDispose` is automatically disposed
+        // on autofac context dispose, so registering to this is no longer required.
         public DisposableStack DisposeStack { get; } = new();
         public IReadOnlyList<INethermindPlugin> Plugins { get; } = new List<INethermindPlugin>();
         public IList<IPublisher> Publishers { get; } = new List<IPublisher>(); // this should be called publishers
         public CompositePruningTrigger PruningTrigger { get; } = new();
-        public IProcessExitSource? ProcessExit { get; set; }
         public CompositeTxGossipPolicy TxGossipPolicy { get; } = new();
+
+        public ILifetimeScope BaseContainer { get; set; }
     }
 }
