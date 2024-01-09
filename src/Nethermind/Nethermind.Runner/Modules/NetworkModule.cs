@@ -19,6 +19,7 @@ public class NetworkModule : Module
         // Some dependency issue with INetworkConfig prevented automatic constructor injection here
         builder.Register<ITimerFactory, INetworkConfig, ILogManager, NodeStatsManager>(
                 (tf, nc, lm) => new NodeStatsManager(tf, lm, nc.MaxCandidatePeerCount))
-            .As<INodeStatsManager>();
+            .As<INodeStatsManager>()
+            .SingleInstance();
     }
 }
