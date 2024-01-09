@@ -5,7 +5,7 @@ using Autofac;
 using Nethermind.Init.Steps;
 using Module = Autofac.Module;
 
-public class StepModule: Module
+public class StepModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {
