@@ -38,11 +38,9 @@ namespace Nethermind.Api.Extensions
         IBlockProductionTrigger DefaultBlockProductionTrigger { get; }
 
         /// <summary>
-        /// Module that is registered before any steps was run.
-        /// TODO: This is probably AFTER default component was registered. Probably not needed so early on.
-        /// this will resolve itself after everything become dependency injected.
+        /// Autofac Module so that the consensus can replace components. Only called when chainspec matches consensus.
         /// </summary>
-        IModule? GetEarlyModule()
+        IModule? GetConsensusModule()
         {
             return null;
         }

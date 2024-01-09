@@ -263,7 +263,7 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin, IInitial
 
     public bool MustInitialize => true;
 
-    public IModule? GetEarlyModule()
+    public IModule? GetConsensusModule()
     {
         return new OptimismModule();
     }

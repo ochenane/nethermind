@@ -77,7 +77,7 @@ namespace Nethermind.Consensus.AuRa
 
         public bool ShouldRunSteps(INethermindApi api) => true;
 
-        public IModule? GetEarlyModule()
+        public IModule? GetConsensusModule()
         {
             return new AuraModule();
         }

@@ -192,7 +192,7 @@ namespace Nethermind.Consensus.Clique
         private ICliqueConfig? _cliqueConfig;
 
         private IBlocksConfig? _blocksConfig;
-        public IModule? GetEarlyModule()
+        public IModule? GetConsensusModule()
         {
             return new CliqueModule();
         }

@@ -65,7 +65,7 @@ namespace Nethermind.Runner.Ethereum.Api
             ));
             containerBuilder.RegisterModule(new NetworkModule());
             containerBuilder.RegisterModule(new KeyStoreModule());
-            IModule? consensusModule = enginePlugin?.GetEarlyModule();
+            IModule? consensusModule = enginePlugin?.GetConsensusModule();
             if (consensusModule != null) containerBuilder.RegisterModule(consensusModule);
             return containerBuilder.Build().Resolve<INethermindApi>();
         }
