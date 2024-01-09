@@ -43,7 +43,7 @@ namespace Nethermind.Api
         // TODO: Eventually, no part should use this
         ILifetimeScope BaseContainer { get; }
 
-        // But these in the same place so that we can double check that its no longer used.
+        // Put these in the same place so that we can double check that its no longer used.
         // Every time we migrate to dependency injection, always put it here so that we can keep track what can be
         // removed. Eventually, there should not be any of these left.
         IProcessExitSource? ProcessExit => BaseContainer.Resolve<IProcessExitSource>();

@@ -32,7 +32,8 @@ namespace Nethermind.Init.Steps
             List<Type> allStepTypes = new List<Type>();
             foreach (Assembly stepsAssembly in _stepsAssemblies)
             {
-                allStepTypes.AddRange(stepsAssembly.GetExportedTypes().Where((s) => IsStepType(s) && !s.IsAbstract));
+                allStepTypes.AddRange(stepsAssembly.GetExportedTypes()
+                    .Where(t => !t.IsInterface && !t.IsAbstract && IsStepType(t)));
             }
 
             return allStepTypes
