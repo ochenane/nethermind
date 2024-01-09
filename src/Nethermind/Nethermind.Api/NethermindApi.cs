@@ -84,7 +84,7 @@ namespace Nethermind.Api
                 FilterStore,
                 FilterManager,
                 EthereumEcdsa,
-                Timestamper,
+                ((INethermindApi)this).Timestamper,
                 LogFinder,
                 ((INethermindApi)this).SpecProvider!,
                 blocksConfig,
@@ -112,7 +112,6 @@ namespace Nethermind.Api
         public ISignerStore? EngineSignerStore { get; set; }
         public IEnode? Enode { get; set; }
         public IEthereumEcdsa? EthereumEcdsa { get; set; }
-        public IFileSystem FileSystem { get; set; } = new FileSystem();
         public IFilterStore? FilterStore { get; set; }
         public IFilterManager? FilterManager { get; set; }
         public IUnclesValidator? UnclesValidator { get; set; }
@@ -123,7 +122,6 @@ namespace Nethermind.Api
             new BuildBlocksWhenRequested();
 
         public IIPResolver? IpResolver { get; set; }
-        public IKeyStore? KeyStore { get; set; }
         public ILogFinder? LogFinder { get; set; }
         public IMessageSerializationService MessageSerializationService { get; } = new MessageSerializationService();
         public IGossipPolicy GossipPolicy { get; set; } = Policy.FullGossip;
@@ -177,7 +175,6 @@ namespace Nethermind.Api
         public IWorldStateManager? WorldStateManager { get; set; }
         public IStateReader? StateReader { get; set; }
         public IStaticNodesManager? StaticNodesManager { get; set; }
-        public ITimestamper Timestamper { get; } = Core.Timestamper.Default;
         public ITransactionProcessor? TransactionProcessor { get; set; }
         public ITrieStore? TrieStore { get; set; }
         public ITxSender? TxSender { get; set; }
@@ -193,18 +190,22 @@ namespace Nethermind.Api
 
         public IEthSyncingInfo? EthSyncingInfo { get; set; }
         public IBlockProductionPolicy? BlockProductionPolicy { get; set; }
-        public IWallet? Wallet { get; set; }
         public IBlockStore? BadBlocksStore { get; set; }
         public ITransactionComparerProvider? TransactionComparerProvider { get; set; }
         public IWebSocketsManager WebSocketsManager { get; set; } = new WebSocketsManager();
 
         public ISubscriptionFactory? SubscriptionFactory { get; set; }
-        public ProtectedPrivateKey? NodeKey { get; set; }
+
+        private ProtectedPrivateKey? _nodeKey;
+        public ProtectedPrivateKey? NodeKey => _nodeKey ??= BaseContainer.Resolve<INodeKeyManager>().LoadNodeKey();
 
         /// <summary>
         /// Key used for signing blocks. Original as its loaded on startup. This can later be changed via RPC in <see cref="Signer"/>.
         /// </summary>
-        public ProtectedPrivateKey? OriginalSignerKey { get; set; }
+        private ProtectedPrivateKey? _originalSignerKey;
+
+        public ProtectedPrivateKey? OriginalSignerKey =>
+            _originalSignerKey ??= BaseContainer.Resolve<INodeKeyManager>().LoadSignerKey();
 
         // Note: when migrating to dependency injection, the component implementing `IDispose` is automatically disposed
         // on autofac context dispose, so registering to this is no longer required.

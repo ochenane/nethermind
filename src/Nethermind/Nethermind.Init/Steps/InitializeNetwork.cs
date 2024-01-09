@@ -58,7 +58,6 @@ public static class NettyMemoryEstimator
 [RunnerStepDependencies(
     typeof(LoadGenesisBlock),
     typeof(UpdateDiscoveryConfig),
-    typeof(SetupKeyStore),
     typeof(ResolveIps),
     typeof(InitializePlugins),
     typeof(InitializeBlockchain))]

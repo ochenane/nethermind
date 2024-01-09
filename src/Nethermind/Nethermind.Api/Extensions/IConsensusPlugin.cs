@@ -4,7 +4,6 @@
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Core;
-using Nethermind.Config;
 using Nethermind.Consensus;
 using Nethermind.Consensus.Producers;
 using Nethermind.Consensus.Transactions;

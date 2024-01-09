@@ -32,7 +32,7 @@ using Nethermind.Serialization.Json;
 
 namespace Nethermind.Init.Steps;
 
-[RunnerStepDependencies(typeof(InitializeNetwork), typeof(SetupKeyStore), typeof(InitializeBlockchain), typeof(InitializePlugins))]
+[RunnerStepDependencies(typeof(InitializeNetwork), typeof(ResolveIps), typeof(InitializeBlockchain), typeof(InitializePlugins))]
 public class RegisterRpcModules : IStep
 {
     private readonly INethermindApi _api;

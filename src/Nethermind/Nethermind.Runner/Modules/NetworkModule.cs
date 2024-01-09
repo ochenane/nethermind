@@ -10,7 +10,7 @@ using Nethermind.Stats;
 
 namespace Nethermind.Runner.Modules;
 
-public class NetworkModule: Module
+public class NetworkModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {

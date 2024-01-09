@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2022 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Nethermind.Api;
+using Nethermind.Config;
 using Nethermind.Core.Attributes;
 using Nethermind.Network;
 using Nethermind.Network.Config;
@@ -29,6 +31,11 @@ namespace Nethermind.Init.Steps
             await _api.IpResolver.Initialize();
             networkConfig.ExternalIp = _api.IpResolver.ExternalIp.ToString();
             networkConfig.LocalIp = _api.IpResolver.LocalIp.ToString();
+
+            IPAddress ipAddress = networkConfig.ExternalIp is not null ? IPAddress.Parse(networkConfig.ExternalIp) : IPAddress.Loopback;
+            IEnode enode = _api.Enode = new Enode(_api.NodeKey!.PublicKey, ipAddress, networkConfig.P2PPort);
+
+            _api.LogManager.SetGlobalVariable("enode", enode.ToString());
         }
     }
 }

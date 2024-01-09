@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions;
 using System.Linq;
 using Autofac;
 using Autofac.Core;
@@ -14,6 +15,7 @@ using Nethermind.Api;
 using Nethermind.Blockchain.Synchronization;
 using Nethermind.Config;
 using Nethermind.Consensus;
+using Nethermind.Core;
 using Nethermind.Core.Specs;
 using Nethermind.Core.Timers;
 using Nethermind.Crypto;
@@ -81,6 +83,12 @@ public class BaseModule : Module
 
         builder.RegisterInstance(TimerFactory.Default)
             .As<ITimerFactory>();
+
+        builder.RegisterInstance(Timestamper.Default)
+            .As<ITimestamper>();
+
+        builder.RegisterInstance(new FileSystem())
+            .As<IFileSystem>();
     }
 
     private void SetLoggerVariables(ChainSpec chainSpec, ILogManager logManager)
@@ -93,7 +101,7 @@ public class BaseModule : Module
     /// <summary>
     /// Dynamically resolve IConfig<T>
     /// </summary>
-    private class ConfigRegistrationSource: IRegistrationSource
+    private class ConfigRegistrationSource : IRegistrationSource
     {
         private readonly IConfigProvider _configProvider;
 
@@ -104,7 +112,7 @@ public class BaseModule : Module
         public IEnumerable<IComponentRegistration> RegistrationsFor(Service service, Func<Service, IEnumerable<ServiceRegistration>> registrationAccessor)
         {
             IServiceWithType swt = service as IServiceWithType;
-            if(swt == null || !typeof(IConfig).IsAssignableFrom(swt.ServiceType))
+            if (swt == null || !typeof(IConfig).IsAssignableFrom(swt.ServiceType))
             {
                 // It's not a request for the base handler type, so skip it.
                 return Enumerable.Empty<IComponentRegistration>();
@@ -117,7 +125,7 @@ public class BaseModule : Module
                 new RootScopeLifetime(),
                 InstanceSharing.Shared,
                 InstanceOwnership.OwnedByLifetimeScope,
-                new [] { service },
+                new[] { service },
                 new Dictionary<string, object>());
 
             return new IComponentRegistration[] { registration };

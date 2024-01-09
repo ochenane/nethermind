@@ -21,6 +21,7 @@ using Nethermind.Specs.ChainSpecStyle;
 using Nethermind.Stats;
 using Nethermind.Synchronization;
 using Nethermind.Synchronization.ParallelSync;
+using Nethermind.Wallet;
 
 namespace Nethermind.Api
 {
@@ -33,14 +34,11 @@ namespace Nethermind.Api
         IRocksDbFactory? RocksDbFactory { get; set; }
         IMemDbFactory? MemDbFactory { get; set; }
         IEthereumEcdsa? EthereumEcdsa { get; set; }
-        IFileSystem FileSystem { get; set; }
-        IKeyStore? KeyStore { get; set; }
-        ProtectedPrivateKey? OriginalSignerKey { get; set; }
+        ProtectedPrivateKey? OriginalSignerKey { get; }
         IReadOnlyList<INethermindPlugin> Plugins { get; }
         string SealEngineType { get; }
         ISyncModeSelector SyncModeSelector { get; set; }
         IBetterPeerStrategy? BetterPeerStrategy { get; set; }
-        ITimestamper Timestamper { get; }
 
         // TODO: Eventually, no part should use this
         ILifetimeScope BaseContainer { get; }
@@ -58,6 +56,10 @@ namespace Nethermind.Api
         IJsonSerializer EthereumJsonSerializer => BaseContainer.Resolve<IJsonSerializer>();
         ITimerFactory TimerFactory => BaseContainer.Resolve<ITimerFactory>();
         INodeStatsManager NodeStatsManager => BaseContainer.Resolve<INodeStatsManager>();
+        IKeyStore KeyStore => BaseContainer.Resolve<IKeyStore>();
+        ITimestamper Timestamper => BaseContainer.Resolve<ITimestamper>();
+        IWallet Wallet => BaseContainer.Resolve<IWallet>();
+        IFileSystem FileSystem => BaseContainer.Resolve<IFileSystem>();
 
         public IConsensusPlugin? GetConsensusPlugin() =>
             Plugins

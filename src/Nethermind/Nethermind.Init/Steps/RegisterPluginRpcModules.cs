@@ -31,7 +31,7 @@ using Nethermind.JsonRpc.Modules.Rpc;
 
 namespace Nethermind.Init.Steps;
 
-[RunnerStepDependencies(typeof(InitializeNetwork), typeof(SetupKeyStore), typeof(InitializeBlockchain), typeof(InitializePlugins), typeof(InitializeBlockProducer), typeof(RegisterRpcModules))]
+[RunnerStepDependencies(typeof(InitializeNetwork), typeof(ResolveIps), typeof(InitializeBlockchain), typeof(InitializePlugins), typeof(InitializeBlockProducer), typeof(RegisterRpcModules))]
 public class RegisterPluginRpcModules : IStep
 {
     private readonly INethermindApi _api;

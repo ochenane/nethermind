@@ -44,7 +44,7 @@ using Nethermind.Wallet;
 
 namespace Nethermind.Init.Steps
 {
-    [RunnerStepDependencies(typeof(InitializeStateDb), typeof(InitializePlugins), typeof(InitializeBlockTree), typeof(SetupKeyStore))]
+    [RunnerStepDependencies(typeof(InitializeStateDb), typeof(InitializePlugins), typeof(InitializeBlockTree), typeof(ResolveIps))]
     public class InitializeBlockchain : IStep
     {
         private readonly INethermindApi _api;

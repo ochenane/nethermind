@@ -10,7 +10,7 @@ using Nethermind.Config;
 
 namespace Nethermind.Init.Steps
 {
-    [RunnerStepDependencies(typeof(SetupKeyStore))]
+    [RunnerStepDependencies(typeof(ResolveIps))]
     public class FilterBootnodes : IStep
     {
         private readonly IApiWithStores _api;
