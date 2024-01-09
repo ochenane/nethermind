@@ -124,7 +124,7 @@ namespace Nethermind.Runner.Test
                 networkConfig.P2PPort = port;
                 networkConfig.DiscoveryPort = port;
 
-                IContainer container = new ApiBuilder(configProvider, Substitute.For<IProcessExitSource>(), LimboLogs.Instance).Create();
+                IContainer container = new NethermindContainerBuilder(configProvider, Substitute.For<IProcessExitSource>(), LimboLogs.Instance).Create();
                 container.Resolve<INethermindApi>().RpcModuleProvider = new RpcModuleProvider(new FileSystem(), new JsonRpcConfig(), LimboLogs.Instance);
                 EthereumRunner runner = container.Resolve<EthereumRunner>();
 

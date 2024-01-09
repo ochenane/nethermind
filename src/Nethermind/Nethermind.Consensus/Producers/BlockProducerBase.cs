@@ -296,8 +296,7 @@ namespace Nethermind.Consensus.Producers
         {
             BlockHeader header = PrepareBlockHeader(parent, payloadAttributes);
 
-            IEnumerable<Transaction> transactions =
-                _txSource.GetTransactions(parent, header.GasLimit, payloadAttributes);
+            IEnumerable<Transaction> transactions = _txSource.GetTransactions(parent, header.GasLimit, payloadAttributes);
 
             return new BlockToProduce(header, transactions, Array.Empty<BlockHeader>(), payloadAttributes?.Withdrawals);
         }

@@ -25,6 +25,7 @@ using Nethermind.Synchronization.ParallelSync;
 using Autofac;
 using Autofac.Core;
 using Nethermind.HealthChecks;
+using Nethermind.Init.Steps;
 
 namespace Nethermind.Optimism;
 
@@ -274,8 +275,7 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
 
     public IModule? GetModule(string engineType, IConfigProvider configProvider)
     {
-        if (engineType != SealEngineType) return null;
-        return new OptimismModule();
+        return ShouldRunSteps(engineType) ? new OptimismModule() : null;
     }
 
     private class OptimismModule : Module
@@ -291,6 +291,8 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
             builder.RegisterType<OptimismGasLimitCalculator>()
                 .As<IGasLimitCalculator>()
                 .SingleInstance();
+
+            builder.RegisterIStepsFromAssembly(GetType().Assembly);
         }
     }
 }

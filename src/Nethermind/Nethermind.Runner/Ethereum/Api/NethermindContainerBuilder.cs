@@ -20,7 +20,7 @@ using Nethermind.Specs.ChainSpecStyle;
 
 namespace Nethermind.Runner.Ethereum.Api
 {
-    public class ApiBuilder
+    public class NethermindContainerBuilder
     {
         private readonly IConfigProvider _configProvider;
         private readonly IJsonSerializer _jsonSerializer;
@@ -29,7 +29,7 @@ namespace Nethermind.Runner.Ethereum.Api
         private readonly ILogger _logger;
         private readonly IInitConfig _initConfig;
 
-        public ApiBuilder(IConfigProvider configProvider, IProcessExitSource processExitSource, ILogManager logManager)
+        public NethermindContainerBuilder(IConfigProvider configProvider, IProcessExitSource processExitSource, ILogManager logManager)
         {
             _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
             _processExitSource = processExitSource ?? throw new ArgumentNullException(nameof(processExitSource));

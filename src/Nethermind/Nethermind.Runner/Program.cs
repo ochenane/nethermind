@@ -175,7 +175,7 @@ public static class Program
             if (_logger.IsDebug) _logger.Debug($"Nethermind config:{Environment.NewLine}{serializer.Serialize(initConfig, true)}{Environment.NewLine}");
             if (_logger.IsInfo) _logger.Info($"RocksDb Version: {DbOnTheRocks.GetRocksDbVersion()}");
 
-            ApiBuilder apiBuilder = new(configProvider, _processExitSource, logManager);
+            NethermindContainerBuilder nethermindContainerBuilder = new(configProvider, _processExitSource, logManager);
 
             IList<INethermindPlugin> plugins = new List<INethermindPlugin>();
             foreach (Type pluginType in pluginLoader.PluginTypes)
@@ -193,7 +193,7 @@ public static class Program
                 }
             }
 
-            IContainer container = apiBuilder.Create(plugins);
+            IContainer container = nethermindContainerBuilder.Create(plugins);
             EthereumRunner ethereumRunner = null;
             _appClosed.Reset();
             try
