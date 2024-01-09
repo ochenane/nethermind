@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
 using Nethermind.Api;
 using Nethermind.Api.Extensions;
 using Nethermind.Core;
@@ -18,12 +19,13 @@ namespace Nethermind.Runner.Ethereum
     public class EthereumRunner
     {
         private readonly INethermindApi _api;
-
         private readonly ILogger _logger;
+        private readonly EthereumStepsManager _stepManager;
 
-        public EthereumRunner(INethermindApi api)
+        public EthereumRunner(INethermindApi api, EthereumStepsManager stepsManager)
         {
             _api = api;
+            _stepManager = stepsManager;
             _logger = api.LogManager.GetClassLogger();
         }
 
@@ -31,9 +33,7 @@ namespace Nethermind.Runner.Ethereum
         {
             if (_logger.IsDebug) _logger.Debug("Initializing Ethereum");
 
-            EthereumStepsLoader stepsLoader = new EthereumStepsLoader(_api.BaseContainer);
-            EthereumStepsManager stepsManager = new EthereumStepsManager(stepsLoader, _api, _api.LogManager);
-            await stepsManager.InitializeAll(cancellationToken);
+            await _stepManager.InitializeAll(cancellationToken);
 
             string infoScreen = ThisNodeInfo.BuildNodeInfoScreen();
             if (_logger.IsInfo) _logger.Info(infoScreen);

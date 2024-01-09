@@ -40,10 +40,10 @@ namespace Nethermind.Runner.Ethereum.Api
             _jsonSerializer = new EthereumJsonSerializer();
         }
 
-        public INethermindApi Create(params INethermindPlugin[] plugins) =>
+        public IContainer Create(params INethermindPlugin[] plugins) =>
             Create((IEnumerable<INethermindPlugin>)plugins);
 
-        public INethermindApi Create(IEnumerable<INethermindPlugin> plugins)
+        public IContainer Create(IEnumerable<INethermindPlugin> plugins)
         {
             ChainSpec chainSpec = LoadChainSpec(_jsonSerializer);
             bool wasCreated = Interlocked.CompareExchange(ref _apiCreated, 1, 0) == 1;
@@ -65,6 +65,7 @@ namespace Nethermind.Runner.Ethereum.Api
             containerBuilder.RegisterModule(new NetworkModule());
             containerBuilder.RegisterModule(new KeyStoreModule());
             containerBuilder.RegisterModule(new StepModule());
+            containerBuilder.RegisterInstance(plugins);
 
             foreach (INethermindPlugin nethermindPlugin in plugins)
             {
@@ -75,7 +76,7 @@ namespace Nethermind.Runner.Ethereum.Api
                 }
             }
 
-            return containerBuilder.Build().Resolve<INethermindApi>();
+            return containerBuilder.Build();
         }
 
         private int _apiCreated;

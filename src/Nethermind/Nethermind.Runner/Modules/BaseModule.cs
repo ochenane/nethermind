@@ -20,6 +20,7 @@ using Nethermind.Core.Specs;
 using Nethermind.Core.Timers;
 using Nethermind.Crypto;
 using Nethermind.Db.Rocks.Config;
+using Nethermind.Init.Steps;
 using Nethermind.Logging;
 using Nethermind.Network.Config;
 using Nethermind.Serialization.Json;
@@ -89,6 +90,11 @@ public class BaseModule : Module
 
         builder.RegisterInstance(new FileSystem())
             .As<IFileSystem>();
+
+        builder.RegisterType<EthereumStepsLoader>()
+            .UsingConstructor(typeof(ILifetimeScope))
+            .As<IEthereumStepsLoader>()
+            .SingleInstance();
     }
 
     private void SetLoggerVariables(ChainSpec chainSpec, ILogManager logManager)

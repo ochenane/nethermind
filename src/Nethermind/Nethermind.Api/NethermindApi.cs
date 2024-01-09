@@ -36,14 +36,12 @@ using Nethermind.JsonRpc;
 using Nethermind.JsonRpc.Modules;
 using Nethermind.JsonRpc.Modules.Eth.GasPrice;
 using Nethermind.JsonRpc.Modules.Subscribe;
-using Nethermind.KeyStore;
 using Nethermind.Monitoring;
 using Nethermind.Network;
 using Nethermind.Network.P2P.Analyzers;
 using Nethermind.Network.Rlpx;
 using Nethermind.State;
 using Nethermind.State.Repositories;
-using Nethermind.Stats;
 using Nethermind.Synchronization;
 using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.Peers;
@@ -51,7 +49,6 @@ using Nethermind.Trie.Pruning;
 using Nethermind.TxPool;
 using Nethermind.Wallet;
 using Nethermind.Sockets;
-using Nethermind.Specs.ChainSpecStyle;
 
 namespace Nethermind.Api
 {
@@ -60,7 +57,6 @@ namespace Nethermind.Api
         public NethermindApi(ILifetimeScope container)
         {
             BaseContainer = container;
-            DisposeStack.Push((IDisposable)container);
         }
 
         public IBlockchainBridge CreateBlockchainBridge()
@@ -210,7 +206,6 @@ namespace Nethermind.Api
         // Note: when migrating to dependency injection, the component implementing `IDispose` is automatically disposed
         // on autofac context dispose, so registering to this is no longer required.
         public DisposableStack DisposeStack { get; } = new();
-        public IReadOnlyList<INethermindPlugin> Plugins { get; } = new List<INethermindPlugin>();
         public IList<IPublisher> Publishers { get; } = new List<IPublisher>(); // this should be called publishers
         public CompositePruningTrigger PruningTrigger { get; } = new();
         public CompositeTxGossipPolicy TxGossipPolicy { get; } = new();

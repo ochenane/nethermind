@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
 #if !DEBUG
 using DotNetty.Common;
 #endif
@@ -29,6 +30,7 @@ using Nethermind.Core.Exceptions;
 using Nethermind.Db.Rocks;
 using Nethermind.Hive;
 using Nethermind.Init.Snapshot;
+using Nethermind.Init.Steps;
 using Nethermind.KeyStore.Config;
 using Nethermind.Logging;
 using Nethermind.Logging.NLog;
@@ -191,13 +193,12 @@ public static class Program
                 }
             }
 
-            INethermindApi nethermindApi = apiBuilder.Create(plugins.OfType<IConsensusPlugin>());
-            ((List<INethermindPlugin>)nethermindApi.Plugins).AddRange(plugins);
-
+            IContainer container = apiBuilder.Create(plugins);
+            EthereumRunner ethereumRunner = null;
             _appClosed.Reset();
-            EthereumRunner ethereumRunner = new(nethermindApi);
             try
             {
+                ethereumRunner = container.Resolve<EthereumRunner>();
                 await ethereumRunner.Start(_processExitSource.Token);
 
                 await _processExitSource.ExitTask;
@@ -217,7 +218,8 @@ public static class Program
             }
 
             _logger.Info("Closing, please wait until all functions are stopped properly...");
-            await ethereumRunner.StopAsync();
+            await ethereumRunner?.StopAsync();
+            await container.DisposeAsync();
             _logger.Info("All done, goodbye!");
             _appClosed.Set();
 

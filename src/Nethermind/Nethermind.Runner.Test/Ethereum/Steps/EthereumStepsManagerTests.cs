@@ -5,7 +5,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
-using Autofac.Features.ResolveAnything;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Nethermind.Api;
@@ -22,7 +21,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         [Test]
         public async Task When_no_assemblies_defined()
         {
-            NethermindApi runnerContext = CreateNethermindApi();
+            IContainer runnerContext = CreateNethermindApi();
 
             IEthereumStepsLoader stepsLoader = new EthereumStepsLoader();
             EthereumStepsManager stepsManager = new EthereumStepsManager(
@@ -37,9 +36,9 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         [Test]
         public async Task With_steps_from_here()
         {
-            NethermindApi runnerContext = CreateNethermindApi();
+            IContainer runnerContext = CreateNethermindApi();
 
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(CreateContainer());
+            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(runnerContext);
             EthereumStepsManager stepsManager = new EthereumStepsManager(
                 stepsLoader,
                 runnerContext,
@@ -64,9 +63,9 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         [Retry(3)]
         public async Task With_steps_from_here_AuRa()
         {
-            AuRaNethermindApi runnerContext = CreateAuraApi();
+            IContainer runnerContext = CreateAuraApi();
 
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(CreateContainer());
+            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(runnerContext);
             EthereumStepsManager stepsManager = new EthereumStepsManager(
                 stepsLoader,
                 runnerContext,
@@ -87,9 +86,9 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         [Test]
         public async Task With_failing_steps()
         {
-            NethermindApi runnerContext = CreateNethermindApi();
+            IContainer runnerContext = CreateNethermindApi();
 
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(CreateContainer());
+            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(runnerContext);
             EthereumStepsManager stepsManager = new EthereumStepsManager(
                 stepsLoader,
                 runnerContext,
@@ -110,14 +109,24 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
             }
         }
 
-        private static NethermindApi CreateNethermindApi() =>
-            new(CreateContainer());
-        private static AuRaNethermindApi CreateAuraApi() =>
-            new(CreateContainer());
-
-        private static IContainer CreateContainer()
+        private static IContainer CreateNethermindApi()
         {
             ContainerBuilder builder = new ContainerBuilder();
+            builder.RegisterType<StepLong>().As<IStep>().AsSelf();
+            builder.RegisterType<StepForever>().As<IStep>().AsSelf();
+            builder.RegisterType<StepA>().As<IStep>().AsSelf();
+            builder.RegisterType<StepB>().As<IStep>().AsSelf();
+            builder.RegisterType<StepCStandard>().As<IStep>().AsSelf();
+            return builder.Build();
+        }
+        private static IContainer CreateAuraApi()
+        {
+            ContainerBuilder builder = new ContainerBuilder();
+            builder.RegisterType<StepLong>().As<IStep>().AsSelf();
+            builder.RegisterType<StepForever>().As<IStep>().AsSelf();
+            builder.RegisterType<StepA>().As<IStep>().AsSelf();
+            builder.RegisterType<StepB>().As<IStep>().AsSelf();
+            builder.RegisterType<StepCAuRa>().As<IStep>().AsSelf();
             return builder.Build();
         }
     }
@@ -192,7 +201,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
     /// </summary>
     public class StepCAuRa : StepC
     {
-        public StepCAuRa(AuRaNethermindApi runnerContext)
+        public StepCAuRa()
         {
         }
 
@@ -204,7 +213,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
 
     public class StepCStandard : StepC
     {
-        public StepCStandard(NethermindApi runnerContext)
+        public StepCStandard()
         {
         }
     }

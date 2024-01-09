@@ -21,18 +21,18 @@ namespace Nethermind.Init.Steps
         private readonly ILogger _logger;
 
         private readonly AutoResetEvent _autoResetEvent = new AutoResetEvent(true);
-        private readonly INethermindApi _api;
+        private readonly ILifetimeScope _container;
         private readonly List<StepInfo> _allSteps;
         private readonly Dictionary<Type, StepInfo> _allStepsByBaseType;
 
         public EthereumStepsManager(
             IEthereumStepsLoader loader,
-            INethermindApi context,
+            ILifetimeScope container,
             ILogManager logManager)
         {
             ArgumentNullException.ThrowIfNull(loader);
 
-            _api = context ?? throw new ArgumentNullException(nameof(context));
+            _container = container ?? throw new ArgumentNullException(nameof(container));
             _logger = logManager?.GetClassLogger<EthereumStepsManager>()
                       ?? throw new ArgumentNullException(nameof(logManager));
 
@@ -193,7 +193,7 @@ namespace Nethermind.Init.Steps
             IStep? step = null;
             try
             {
-                step = (IStep)_api.BaseContainer.Resolve(stepInfo.StepType);
+                step = (IStep)_container.Resolve(stepInfo.StepType);
             }
             catch (Exception e)
             {

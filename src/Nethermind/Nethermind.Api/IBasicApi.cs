@@ -35,7 +35,6 @@ namespace Nethermind.Api
         IMemDbFactory? MemDbFactory { get; set; }
         IEthereumEcdsa? EthereumEcdsa { get; set; }
         ProtectedPrivateKey? OriginalSignerKey { get; }
-        IReadOnlyList<INethermindPlugin> Plugins { get; }
         string SealEngineType { get; }
         ISyncModeSelector SyncModeSelector { get; set; }
         IBetterPeerStrategy? BetterPeerStrategy { get; set; }
@@ -60,6 +59,7 @@ namespace Nethermind.Api
         ITimestamper Timestamper => BaseContainer.Resolve<ITimestamper>();
         IWallet Wallet => BaseContainer.Resolve<IWallet>();
         IFileSystem FileSystem => BaseContainer.Resolve<IFileSystem>();
+        IReadOnlyList<INethermindPlugin> Plugins => BaseContainer.Resolve<IReadOnlyList<INethermindPlugin>>();
 
         public IConsensusPlugin? GetConsensusPlugin() =>
             Plugins
