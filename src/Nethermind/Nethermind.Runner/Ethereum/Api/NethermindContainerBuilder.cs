@@ -68,7 +68,7 @@ namespace Nethermind.Runner.Ethereum.Api
 
             foreach (INethermindPlugin nethermindPlugin in plugins)
             {
-                containerBuilder.RegisterInstance(nethermindPlugin).As<INethermindPlugin>();
+                containerBuilder.RegisterInstance(nethermindPlugin).As<INethermindPlugin>().ExternallyOwned();
                 IModule? pluginModule = nethermindPlugin.GetModule(engine, _configProvider);
                 if (pluginModule != null)
                 {
