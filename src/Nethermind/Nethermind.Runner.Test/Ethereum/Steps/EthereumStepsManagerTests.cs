@@ -9,13 +9,9 @@ using Autofac.Features.ResolveAnything;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Nethermind.Api;
-using Nethermind.Config;
 using Nethermind.Consensus.AuRa.InitializationSteps;
 using Nethermind.Init.Steps;
 using Nethermind.Logging;
-using Nethermind.Serialization.Json;
-using Nethermind.Specs.ChainSpecStyle;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Nethermind.Runner.Test.Ethereum.Steps
@@ -43,7 +39,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         {
             NethermindApi runnerContext = CreateNethermindApi();
 
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(GetType().Assembly);
+            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(CreateContainer());
             EthereumStepsManager stepsManager = new EthereumStepsManager(
                 stepsLoader,
                 runnerContext,
@@ -70,7 +66,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         {
             AuRaNethermindApi runnerContext = CreateAuraApi();
 
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(GetType().Assembly);
+            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(CreateContainer());
             EthereumStepsManager stepsManager = new EthereumStepsManager(
                 stepsLoader,
                 runnerContext,
@@ -93,7 +89,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         {
             NethermindApi runnerContext = CreateNethermindApi();
 
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(GetType().Assembly);
+            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(CreateContainer());
             EthereumStepsManager stepsManager = new EthereumStepsManager(
                 stepsLoader,
                 runnerContext,
@@ -122,7 +118,6 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         private static IContainer CreateContainer()
         {
             ContainerBuilder builder = new ContainerBuilder();
-            builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource());
             return builder.Build();
         }
     }

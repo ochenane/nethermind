@@ -192,8 +192,9 @@ namespace Nethermind.Consensus.Clique
         private ICliqueConfig? _cliqueConfig;
 
         private IBlocksConfig? _blocksConfig;
-        public IModule? GetConsensusModule()
+        public IModule? GetModule(string engineType, IConfigProvider configProvider)
         {
+            if (engineType != SealEngineType) return null;
             return new CliqueModule();
         }
 

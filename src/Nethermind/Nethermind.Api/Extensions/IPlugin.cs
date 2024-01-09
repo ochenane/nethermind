@@ -3,6 +3,10 @@
 
 using System;
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Core;
+using Jint.Native;
+using Nethermind.Config;
 
 namespace Nethermind.Api.Extensions
 {
@@ -19,6 +23,8 @@ namespace Nethermind.Api.Extensions
         Task InitNetworkProtocol();
 
         Task InitRpcModules();
+
+        IModule? GetModule(string engineType, IConfigProvider configProvider) => null;
 
         bool MustInitialize { get => false; }
     }

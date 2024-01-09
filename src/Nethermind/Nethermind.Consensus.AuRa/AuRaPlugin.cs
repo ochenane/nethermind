@@ -7,9 +7,11 @@ using Autofac;
 using Autofac.Core;
 using Nethermind.Api;
 using Nethermind.Api.Extensions;
+using Nethermind.Config;
 using Nethermind.Consensus.AuRa.InitializationSteps;
 using Nethermind.Consensus.Producers;
 using Nethermind.Consensus.Transactions;
+using Nethermind.Init.Steps;
 
 [assembly: InternalsVisibleTo("Nethermind.Merge.AuRa")]
 
@@ -18,7 +20,7 @@ namespace Nethermind.Consensus.AuRa
     /// <summary>
     /// Consensus plugin for AuRa setup.
     /// </summary>
-    public class AuRaPlugin : IConsensusPlugin, ISynchronizationPlugin, IInitializationPlugin
+    public class AuRaPlugin : IConsensusPlugin, ISynchronizationPlugin
     {
         private AuRaNethermindApi? _nethermindApi;
         public string Name => SealEngineType;
@@ -75,14 +77,13 @@ namespace Nethermind.Consensus.AuRa
 
         public IBlockProductionTrigger? DefaultBlockProductionTrigger { get; private set; }
 
-        public bool ShouldRunSteps(INethermindApi api) => true;
-
-        public IModule? GetConsensusModule()
+        public IModule? GetModule(string engineType, IConfigProvider configProvider)
         {
+            if (engineType != SealEngineType) return null;
             return new AuraModule();
         }
 
-        private class AuraModule : Module
+        public class AuraModule : Module
         {
             protected override void Load(ContainerBuilder builder)
             {
@@ -102,6 +103,8 @@ namespace Nethermind.Consensus.AuRa
                     if (api.AuraGasLimitCalculator != null) return api.AuraGasLimitCalculator;
                     return baseGasLimit;
                 });
+
+                builder.RegisterIStepsFromAssembly(GetType().Assembly);
             }
         }
     }

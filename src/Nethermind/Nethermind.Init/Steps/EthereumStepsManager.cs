@@ -36,7 +36,7 @@ namespace Nethermind.Init.Steps
             _logger = logManager?.GetClassLogger<EthereumStepsManager>()
                       ?? throw new ArgumentNullException(nameof(logManager));
 
-            _allSteps = loader.LoadSteps(_api.GetType()).ToList();
+            _allSteps = loader.LoadSteps().ToList();
             _allStepsByBaseType = _allSteps.ToDictionary(s => s.StepBaseType, s => s);
         }
 

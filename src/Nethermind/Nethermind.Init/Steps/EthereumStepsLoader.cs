@@ -4,82 +4,56 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using Nethermind.Api;
+using Autofac;
+using Autofac.Core;
+using Autofac.Core.Activators.Reflection;
 
 namespace Nethermind.Init.Steps
 {
     public class EthereumStepsLoader : IEthereumStepsLoader
     {
-        private readonly IEnumerable<Assembly> _stepsAssemblies;
-        private readonly Type _baseApiType = typeof(INethermindApi);
+        private readonly IEnumerable<Type> _steps;
 
-        public EthereumStepsLoader(params Assembly[] stepsAssemblies)
-            : this((IEnumerable<Assembly>)stepsAssemblies) { }
-
-        public EthereumStepsLoader(IEnumerable<Assembly> stepsAssemblies)
+        public EthereumStepsLoader(ILifetimeScope scope)
         {
-            _stepsAssemblies = stepsAssemblies;
+            _steps = scope.ComponentRegistry.RegistrationsFor(new TypedService(typeof(IStep)))
+                .Where(r => r.Activator is ReflectionActivator)
+                .Select(r => ((ReflectionActivator)r.Activator).LimitType)
+                .ToList();
         }
 
-        public IEnumerable<StepInfo> LoadSteps(Type apiType)
+        public EthereumStepsLoader(params Type[] steps)
         {
-            if (!apiType.GetInterfaces().Contains(_baseApiType))
-            {
-                throw new NotSupportedException($"api type must implement {_baseApiType.Name}");
-            }
+            _steps = steps;
+        }
 
-            List<Type> allStepTypes = new List<Type>();
-            foreach (Assembly stepsAssembly in _stepsAssemblies)
-            {
-                allStepTypes.AddRange(stepsAssembly.GetExportedTypes()
-                    .Where(t => !t.IsInterface && !t.IsAbstract && IsStepType(t)));
-            }
-
-            return allStepTypes
+        public IEnumerable<StepInfo> LoadSteps()
+        {
+            return _steps
                 .Select(s => new StepInfo(s, GetStepBaseType(s)))
                 .GroupBy(s => s.StepBaseType)
-                .Select(g => SelectImplementation(g.ToArray(), apiType))
+                .Select(g => SelectImplementation(g.ToArray(), g.Key))
                 .Where(s => s is not null)
                 .Select(s => s!);
         }
 
-        private static bool HasConstructorWithParameter(Type type, Type parameterType)
+        private StepInfo? SelectImplementation(StepInfo[] stepsWithTheSameBase, Type baseType)
         {
-            Type[] expectedParams = { parameterType };
-            return type.GetConstructors().Any(
-                c => c.GetParameters().Select(p => p.ParameterType).SequenceEqual(expectedParams));
-        }
-
-        private StepInfo? SelectImplementation(StepInfo[] stepsWithTheSameBase, Type apiType)
-        {
-            // Some plugin (just Aura) replace some steps implementation. They are marked with having a constructor
-            // with a specific implementation of INethermindApi. This have priority.
-            // Nethermind.Consensus.AuRa.InitializationSteps.InitializeBlockchainAuRa
-            // Nethermind.Consensus.AuRa.InitializationSteps.LoadGenesisBlockAuRa
-            // Nethermind.Consensus.AuRa.InitializationSteps.StartBlockProcessorAuRa
-            // Until they are replaced, be careful not to remove INethermindApi from its constructor.
-            StepInfo[] stepsWithMatchingApiType = stepsWithTheSameBase
-                .Where(t => HasConstructorWithParameter(t.StepType, apiType)).ToArray();
-
-            if (stepsWithMatchingApiType.Length == 0)
+            // In case of multiple step declaration, make sure that there is one final step that is the most specific
+            // implementation.
+            StepInfo[] stepWithNoParent = stepsWithTheSameBase.Where((currentStep) =>
             {
-                // base API type this time
-                stepsWithMatchingApiType = stepsWithTheSameBase
-                    .Where(t => HasConstructorWithParameter(t.StepType, _baseApiType)).ToArray();
+                return !stepsWithTheSameBase.Any(otherStep =>
+                    otherStep != currentStep && currentStep.StepType.IsAssignableFrom(otherStep.StepType));
+            }).ToArray();
+
+            if (stepWithNoParent.Length != 1)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to find unique step for group {baseType.FullName}. Current steps: {stepWithNoParent}");
             }
 
-            if (stepsWithMatchingApiType.Length > 1)
-            {
-                Array.Sort(stepsWithMatchingApiType, (t1, t2) => t1.StepType.IsAssignableFrom(t2.StepType) ? 1 : -1);
-            }
-
-            if (stepsWithMatchingApiType.Length == 0)
-            {
-                stepsWithMatchingApiType = stepsWithTheSameBase;
-            }
-
-            return stepsWithMatchingApiType.FirstOrDefault();
+            return stepWithNoParent[0];
         }
 
         private static bool IsStepType(Type t) => typeof(IStep).IsAssignableFrom(t);

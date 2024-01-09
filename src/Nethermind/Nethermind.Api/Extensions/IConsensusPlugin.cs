@@ -2,14 +2,9 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System.Threading.Tasks;
-using Autofac;
-using Autofac.Core;
 using Nethermind.Consensus;
 using Nethermind.Consensus.Producers;
 using Nethermind.Consensus.Transactions;
-using Nethermind.Logging;
-using Nethermind.Serialization.Json;
-using Nethermind.Specs.ChainSpecStyle;
 
 namespace Nethermind.Api.Extensions
 {
@@ -36,13 +31,5 @@ namespace Nethermind.Api.Extensions
         /// Needed when this plugin is used in combination with other plugin that affects block production like MEV plugin.
         /// </remarks>
         IBlockProductionTrigger DefaultBlockProductionTrigger { get; }
-
-        /// <summary>
-        /// Autofac Module so that the consensus can replace components. Only called when chainspec matches consensus.
-        /// </summary>
-        IModule? GetConsensusModule()
-        {
-            return null;
-        }
     }
 }

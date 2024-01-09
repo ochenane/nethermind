@@ -40,10 +40,10 @@ namespace Nethermind.Runner.Ethereum.Api
             _jsonSerializer = new EthereumJsonSerializer();
         }
 
-        public INethermindApi Create(params IConsensusPlugin[] consensusPlugins) =>
-            Create((IEnumerable<IConsensusPlugin>)consensusPlugins);
+        public INethermindApi Create(params INethermindPlugin[] plugins) =>
+            Create((IEnumerable<INethermindPlugin>)plugins);
 
-        public INethermindApi Create(IEnumerable<IConsensusPlugin> consensusPlugins)
+        public INethermindApi Create(IEnumerable<INethermindPlugin> plugins)
         {
             ChainSpec chainSpec = LoadChainSpec(_jsonSerializer);
             bool wasCreated = Interlocked.CompareExchange(ref _apiCreated, 1, 0) == 1;
@@ -53,7 +53,6 @@ namespace Nethermind.Runner.Ethereum.Api
             }
 
             string engine = chainSpec.SealEngineType;
-            IConsensusPlugin? enginePlugin = consensusPlugins.FirstOrDefault(p => p.SealEngineType == engine);
 
             ContainerBuilder containerBuilder = new ContainerBuilder();
             containerBuilder.RegisterModule(new BaseModule(
@@ -65,8 +64,17 @@ namespace Nethermind.Runner.Ethereum.Api
             ));
             containerBuilder.RegisterModule(new NetworkModule());
             containerBuilder.RegisterModule(new KeyStoreModule());
-            IModule? consensusModule = enginePlugin?.GetConsensusModule();
-            if (consensusModule != null) containerBuilder.RegisterModule(consensusModule);
+            containerBuilder.RegisterModule(new StepModule());
+
+            foreach (INethermindPlugin nethermindPlugin in plugins)
+            {
+                IModule? pluginModule = nethermindPlugin.GetModule(engine, _configProvider);
+                if (pluginModule != null)
+                {
+                    containerBuilder.RegisterModule(pluginModule);
+                }
+            }
+
             return containerBuilder.Build().Resolve<INethermindApi>();
         }
 

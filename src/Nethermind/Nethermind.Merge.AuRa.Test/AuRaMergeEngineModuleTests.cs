@@ -116,7 +116,7 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
                 new EthereumJsonSerializer(),
                 LogManager
             ));
-            containerBuilder.RegisterModule(new AuRaPlugin().GetConsensusModule()!);
+            containerBuilder.RegisterModule(new AuRaPlugin.AuraModule());
             containerBuilder.RegisterInstance(SpecProvider).As<ISpecProvider>();
             IContainer container = containerBuilder.Build();
 

@@ -28,7 +28,7 @@ using Nethermind.HealthChecks;
 
 namespace Nethermind.Optimism;
 
-public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin, IInitializationPlugin
+public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
 {
     public string Author => "Nethermind";
     public string Name => "Optimism";
@@ -47,7 +47,6 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin, IInitial
     private IBeaconPivot? _beaconPivot;
     private BeaconSync? _beaconSync;
 
-    public bool ShouldRunSteps(INethermindApi api) => api.ChainSpec.SealEngineType == SealEngineType;
 
     #region IConsensusPlugin
 
@@ -263,8 +262,19 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin, IInitial
 
     public bool MustInitialize => true;
 
-    public IModule? GetConsensusModule()
+    private bool ShouldRunSteps(INethermindApi api)
     {
+        return ShouldRunSteps(api.SealEngineType);
+    }
+
+    private bool ShouldRunSteps(string engineType)
+    {
+        return engineType == SealEngineType;
+    }
+
+    public IModule? GetModule(string engineType, IConfigProvider configProvider)
+    {
+        if (engineType != SealEngineType) return null;
         return new OptimismModule();
     }
 

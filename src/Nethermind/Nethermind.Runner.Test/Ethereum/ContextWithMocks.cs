@@ -45,6 +45,7 @@ using Nethermind.Sockets;
 using Nethermind.Specs;
 using NSubstitute;
 using Nethermind.Blockchain.Blocks;
+using Nethermind.Core;
 using Nethermind.Core.Timers;
 
 namespace Nethermind.Runner.Test.Ethereum
@@ -61,13 +62,16 @@ namespace Nethermind.Runner.Test.Ethereum
             containerBuilder.RegisterInstance(Substitute.For<IGasLimitCalculator>()).As<IGasLimitCalculator>();
             containerBuilder.RegisterInstance(Substitute.For<INodeStatsManager>()).As<INodeStatsManager>();
             containerBuilder.RegisterInstance(Substitute.For<ITimerFactory>()).As<ITimerFactory>();
+            containerBuilder.RegisterInstance(Substitute.For<ITimestamper>()).As<ITimestamper>();
+            containerBuilder.RegisterInstance(Substitute.For<IWallet>()).As<IWallet>();
+            containerBuilder.RegisterInstance(Substitute.For<IFileSystem>()).As<IFileSystem>();
+            containerBuilder.RegisterInstance(Substitute.For<IKeyStore>()).As<IKeyStore>();
             containerBuilder.RegisterInstance(new ChainSpec());
 
             var api = new NethermindApi(containerBuilder.Build())
             {
                 Enode = Substitute.For<IEnode>(),
                 TxPool = Substitute.For<ITxPool>(),
-                Wallet = Substitute.For<IWallet>(),
                 BlockTree = Substitute.For<IBlockTree>(),
                 SyncServer = Substitute.For<ISyncServer>(),
                 DbProvider = TestMemDbProvider.Init(),
@@ -88,13 +92,11 @@ namespace Nethermind.Runner.Test.Ethereum
                 BlockProducer = Substitute.For<IBlockProducer>(),
                 DiscoveryApp = Substitute.For<IDiscoveryApp>(),
                 EngineSigner = Substitute.For<ISigner>(),
-                FileSystem = Substitute.For<IFileSystem>(),
                 FilterManager = Substitute.For<IFilterManager>(),
                 FilterStore = Substitute.For<IFilterStore>(),
                 GrpcServer = Substitute.For<IGrpcServer>(),
                 HeaderValidator = Substitute.For<IHeaderValidator>(),
                 IpResolver = Substitute.For<IIPResolver>(),
-                KeyStore = Substitute.For<IKeyStore>(),
                 LogFinder = Substitute.For<ILogFinder>(),
                 MonitoringService = Substitute.For<IMonitoringService>(),
                 ProtocolsManager = Substitute.For<IProtocolsManager>(),

@@ -31,25 +31,12 @@ namespace Nethermind.Runner.Ethereum
         {
             if (_logger.IsDebug) _logger.Debug("Initializing Ethereum");
 
-            EthereumStepsLoader stepsLoader = new EthereumStepsLoader(GetStepsAssemblies(_api));
+            EthereumStepsLoader stepsLoader = new EthereumStepsLoader(_api.BaseContainer);
             EthereumStepsManager stepsManager = new EthereumStepsManager(stepsLoader, _api, _api.LogManager);
             await stepsManager.InitializeAll(cancellationToken);
 
             string infoScreen = ThisNodeInfo.BuildNodeInfoScreen();
             if (_logger.IsInfo) _logger.Info(infoScreen);
-        }
-
-        private IEnumerable<Assembly> GetStepsAssemblies(INethermindApi api)
-        {
-            yield return typeof(IStep).Assembly;
-            yield return GetType().Assembly;
-            IEnumerable<IInitializationPlugin> enabledInitializationPlugins =
-                _api.Plugins.OfType<IInitializationPlugin>().Where(p => p.ShouldRunSteps(api));
-
-            foreach (IInitializationPlugin initializationPlugin in enabledInitializationPlugins)
-            {
-                yield return initializationPlugin.GetType().Assembly;
-            }
         }
 
         public async Task StopAsync()
