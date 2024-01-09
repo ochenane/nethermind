@@ -65,10 +65,10 @@ namespace Nethermind.Runner.Ethereum.Api
             containerBuilder.RegisterModule(new NetworkModule());
             containerBuilder.RegisterModule(new KeyStoreModule());
             containerBuilder.RegisterModule(new StepModule());
-            containerBuilder.RegisterInstance(plugins);
 
             foreach (INethermindPlugin nethermindPlugin in plugins)
             {
+                containerBuilder.RegisterInstance(nethermindPlugin).As<INethermindPlugin>();
                 IModule? pluginModule = nethermindPlugin.GetModule(engine, _configProvider);
                 if (pluginModule != null)
                 {
