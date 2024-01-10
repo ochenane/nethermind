@@ -201,7 +201,7 @@ namespace Nethermind.Api
         private ProtectedPrivateKey? _originalSignerKey;
 
         public ProtectedPrivateKey? OriginalSignerKey =>
-            _originalSignerKey ??=  BaseContainer.ResolveKeyed<ProtectedPrivateKey>(PrivateKeyName.SignerKey);
+            _originalSignerKey ??= BaseContainer.ResolveKeyed<ProtectedPrivateKey>(PrivateKeyName.SignerKey);
 
         // Note: when migrating to dependency injection, the component implementing `IDispose` is automatically disposed
         // on autofac context dispose, so registering to this is no longer required.

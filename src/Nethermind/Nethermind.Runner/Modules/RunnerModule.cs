@@ -7,7 +7,7 @@ using Nethermind.Runner.Ethereum;
 
 namespace Nethermind.Runner.Modules;
 
-public class RunnerModule: Module
+public class RunnerModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {
