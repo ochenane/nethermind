@@ -33,8 +33,8 @@ namespace Nethermind.Consensus.AuRa.InitializationSteps;
 
 public class InitializeBlockchainAuRa : InitializeBlockchain
 {
-    private readonly AuRaNethermindApi _auraApi;
-    private readonly INethermindApi _api;
+    private readonly AuRaNethermindApi _api;
+    private INethermindApi NethermindApi => _api;
 
     private AuRaSealValidator? _sealValidator;
     private IAuRaStepCalculator? _auRaStepCalculator;
@@ -42,9 +42,8 @@ public class InitializeBlockchainAuRa : InitializeBlockchain
 
     public InitializeBlockchainAuRa(AuRaNethermindApi api) : base(api)
     {
-        _auraApi = api;
         _api = api;
-        _auraConfig = _api.Config<IAuraConfig>();
+        _auraConfig = NethermindApi.Config<IAuraConfig>();
     }
 
     protected override BlockProcessor CreateBlockProcessor()
@@ -64,7 +63,7 @@ public class InitializeBlockchainAuRa : InitializeBlockchain
         var processingReadOnlyTransactionProcessorSource = CreateReadOnlyTransactionProcessorSource();
         var txPermissionFilterOnlyTxProcessorSource = CreateReadOnlyTransactionProcessorSource();
         ITxFilter auRaTxFilter = TxAuRaFilterBuilders.CreateAuRaTxFilter(
-            _auraApi,
+            _api,
             txPermissionFilterOnlyTxProcessorSource,
             _api.SpecProvider,
             new ServiceTxFilter(_api.SpecProvider));
@@ -72,12 +71,12 @@ public class InitializeBlockchainAuRa : InitializeBlockchain
         IDictionary<long, IDictionary<Address, byte[]>> rewriteBytecode = _api.ChainSpec.AuRa.RewriteBytecode;
         ContractRewriter? contractRewriter = rewriteBytecode?.Count > 0 ? new ContractRewriter(rewriteBytecode) : null;
 
-        var processor = (AuRaBlockProcessor)NewBlockProcessor(_auraApi, auRaTxFilter, contractRewriter);
+        var processor = (AuRaBlockProcessor)NewBlockProcessor(_api, auRaTxFilter, contractRewriter);
 
         var auRaValidator = CreateAuRaValidator(processor, processingReadOnlyTransactionProcessorSource);
         processor.AuRaValidator = auRaValidator;
         var reportingValidator = auRaValidator.GetReportingValidator();
-        _auraApi.ReportingValidator = reportingValidator;
+        _api.ReportingValidator = reportingValidator;
         if (_sealValidator is not null)
         {
             _sealValidator.ReportingValidator = reportingValidator;
@@ -110,7 +109,7 @@ public class InitializeBlockchainAuRa : InitializeBlockchain
         new ReadOnlyTxProcessingEnv(_api.WorldStateManager!, _api.BlockTree, _api.SpecProvider, _api.LogManager);
 
     protected override IHealthHintService CreateHealthHintService() =>
-        new AuraHealthHintService(_auRaStepCalculator, _auraApi.ValidatorStore);
+        new AuraHealthHintService(_auRaStepCalculator, _api.ValidatorStore);
 
 
     private IAuRaValidator CreateAuRaValidator(IBlockProcessor processor, IReadOnlyTxProcessorSource readOnlyTxProcessorSource)
@@ -127,29 +126,29 @@ public class InitializeBlockchainAuRa : InitializeBlockchain
             _api.BlockTree,
             _api.ChainLevelInfoRepository,
             processor,
-            _auraApi.ValidatorStore,
+            _api.ValidatorStore,
             new ValidSealerStrategy(),
             _api.LogManager,
             chainSpecAuRa.TwoThirdsMajorityTransition);
 
         IWorldState worldState = _api.WorldState!;
 
-        IAuRaValidator validator = new AuRaValidatorFactory(_auraApi.AbiEncoder,
+        IAuRaValidator validator = new AuRaValidatorFactory(_api.AbiEncoder,
                 worldState,
                 _api.TransactionProcessor,
                 _api.BlockTree,
                 readOnlyTxProcessorSource,
                 _api.ReceiptStorage,
-                _auraApi.ValidatorStore,
-                _auraApi.FinalizationManager,
+                _api.ValidatorStore,
+                _api.FinalizationManager,
                 new TxPoolSender(_api.TxPool, new TxSealer(_api.EngineSigner, _api.Timestamper), _api.NonceManager, _api.EthereumEcdsa),
                 _api.TxPool,
-                _api.Config<IBlocksConfig>(),
+                NethermindApi.Config<IBlocksConfig>(),
                 _api.LogManager,
                 _api.EngineSigner,
                 _api.SpecProvider,
                 _api.GasPriceOracle,
-                _auraApi.ReportingContractValidatorCache,
+                _api.ReportingContractValidatorCache,
                 chainSpecAuRa.PosdaoTransition)
             .CreateValidatorProcessor(chainSpecAuRa.Validators, _api.BlockTree.Head?.Header);
 
@@ -168,19 +167,19 @@ public class InitializeBlockchainAuRa : InitializeBlockchain
 
         if (blockGasLimitContractTransitions?.Any() == true)
         {
-            _auraApi.GasLimitCalculatorCache = new AuRaContractGasLimitOverride.Cache();
+            _api.GasLimitCalculatorCache = new AuRaContractGasLimitOverride.Cache();
 
             AuRaContractGasLimitOverride gasLimitCalculator = new(
                 blockGasLimitContractTransitions.Select(blockGasLimitContractTransition =>
                     new BlockGasLimitContract(
-                        _auraApi.AbiEncoder,
+                        _api.AbiEncoder,
                         blockGasLimitContractTransition.Value,
                         blockGasLimitContractTransition.Key,
                         CreateReadOnlyTransactionProcessorSource()))
                     .ToArray<IBlockGasLimitContract>(),
-                _auraApi.GasLimitCalculatorCache,
+                _api.GasLimitCalculatorCache,
                 _auraConfig.Minimum2MlnGasPerBlockWhenUsingBlockGasLimitContract,
-                new TargetAdjustedGasLimitCalculator(_api.SpecProvider, _api.Config<IBlocksConfig>()),
+                new TargetAdjustedGasLimitCalculator(_api.SpecProvider, NethermindApi.Config<IBlocksConfig>()),
                 _api.LogManager);
 
             return gasLimitCalculator;
@@ -197,13 +196,13 @@ public class InitializeBlockchainAuRa : InitializeBlockchain
         if (_api.EthereumEcdsa is null) throw new StepDependencyException(nameof(_api.EthereumEcdsa));
         if (_api.BlockTree is null) throw new StepDependencyException(nameof(_api.BlockTree));
 
-        _auraApi.ValidatorStore = new ValidatorStore(_api.DbProvider.BlockInfosDb);
+        _api.ValidatorStore = new ValidatorStore(_api.DbProvider.BlockInfosDb);
 
         ValidSealerStrategy validSealerStrategy = new ValidSealerStrategy();
         AuRaStepCalculator auRaStepCalculator = new AuRaStepCalculator(_api.ChainSpec.AuRa.StepDuration, _api.Timestamper, _api.LogManager);
-        _api.SealValidator = _sealValidator = new AuRaSealValidator(_api.ChainSpec.AuRa, auRaStepCalculator, _api.BlockTree, _auraApi.ValidatorStore, validSealerStrategy, _api.EthereumEcdsa, _api.LogManager);
-        _api.RewardCalculatorSource = AuRaRewardCalculator.GetSource(_api.ChainSpec.AuRa, _auraApi.AbiEncoder);
-        _api.Sealer = new AuRaSealer(_api.BlockTree, _auraApi.ValidatorStore, auRaStepCalculator, _api.EngineSigner, validSealerStrategy, _api.LogManager);
+        _api.SealValidator = _sealValidator = new AuRaSealValidator(_api.ChainSpec.AuRa, auRaStepCalculator, _api.BlockTree, _api.ValidatorStore, validSealerStrategy, _api.EthereumEcdsa, _api.LogManager);
+        _api.RewardCalculatorSource = AuRaRewardCalculator.GetSource(_api.ChainSpec.AuRa, _api.AbiEncoder);
+        _api.Sealer = new AuRaSealer(_api.BlockTree, _api.ValidatorStore, auRaStepCalculator, _api.EngineSigner, validSealerStrategy, _api.LogManager);
         _auRaStepCalculator = auRaStepCalculator;
     }
 
@@ -264,15 +263,15 @@ public class InitializeBlockchainAuRa : InitializeBlockchain
     {
         // This has to be different object than the _processingReadOnlyTransactionProcessorSource as this is in separate thread
         var txPoolReadOnlyTransactionProcessorSource = CreateReadOnlyTransactionProcessorSource();
-        var (txPriorityContract, localDataSource) = TxAuRaFilterBuilders.CreateTxPrioritySources(_auraConfig, _auraApi, txPoolReadOnlyTransactionProcessorSource!);
+        var (txPriorityContract, localDataSource) = TxAuRaFilterBuilders.CreateTxPrioritySources(_auraConfig, _api, txPoolReadOnlyTransactionProcessorSource!);
 
         ReportTxPriorityRules(txPriorityContract, localDataSource);
 
         var minGasPricesContractDataStore = TxAuRaFilterBuilders.CreateMinGasPricesDataStore(_api, txPriorityContract, localDataSource);
 
         ITxFilter txPoolFilter = TxAuRaFilterBuilders.CreateAuRaTxFilterForProducer(
-            _api.Config<IBlocksConfig>(),
-            _auraApi,
+            NethermindApi.Config<IBlocksConfig>(),
+            _api,
             txPoolReadOnlyTransactionProcessorSource,
             minGasPricesContractDataStore,
             _api.SpecProvider);
@@ -281,7 +280,7 @@ public class InitializeBlockchainAuRa : InitializeBlockchain
             _api.EthereumEcdsa,
             _api.BlobTxStorage ?? NullBlobTxStorage.Instance,
             new ChainHeadInfoProvider(_api.SpecProvider, _api.BlockTree, _api.StateReader),
-            _api.Config<ITxPoolConfig>(),
+            NethermindApi.Config<ITxPoolConfig>(),
             _api.TxValidator,
             _api.LogManager,
             CreateTxPoolTxComparer(txPriorityContract, localDataSource),

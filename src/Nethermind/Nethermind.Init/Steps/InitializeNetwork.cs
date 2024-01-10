@@ -59,7 +59,7 @@ public static class NettyMemoryEstimator
 
 [RunnerStepDependencies(
     typeof(LoadGenesisBlock),
-    typeof(AfterResolveIps),
+    typeof(SetupKeyStore),
     typeof(InitializePlugins),
     typeof(InitializeBlockchain))]
 public class InitializeNetwork : IStep

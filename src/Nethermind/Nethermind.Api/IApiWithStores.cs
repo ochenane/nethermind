@@ -26,6 +26,7 @@ namespace Nethermind.Api
         IReceiptStorage? ReceiptStorage { get; set; }
         IReceiptFinder? ReceiptFinder { get; set; }
         IReceiptMonitor? ReceiptMonitor { get; set; }
+        IWallet Wallet { get; }
         IBlockStore? BadBlocksStore { get; set; }
     }
 }

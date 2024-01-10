@@ -33,10 +33,9 @@ using Nethermind.Wallet;
 
 namespace Nethermind.Consensus.AuRa.InitializationSteps;
 
-public class StartBlockProducerAuRa : Module
+public class StartBlockProducerAuRa
 {
-    private readonly AuRaNethermindApi _auraApi;
-    private readonly INethermindApi _api;
+    private readonly AuRaNethermindApi _api;
 
     private BlockProducerEnv? _blockProducerContext;
     private INethermindApi NethermindApi => _api;
@@ -51,7 +50,6 @@ public class StartBlockProducerAuRa : Module
     public StartBlockProducerAuRa(AuRaNethermindApi api)
     {
         _api = api;
-        _auraApi = api;
         _auraConfig = NethermindApi.Config<IAuraConfig>();
     }
 
@@ -88,7 +86,7 @@ public class StartBlockProducerAuRa : Module
 
         BlockProducerEnv producerEnv = GetProducerChain(additionalTxSource);
 
-        IGasLimitCalculator gasLimitCalculator = _auraApi.AuraGasLimitCalculator = CreateGasLimitCalculator(producerEnv.ReadOnlyTxProcessingEnv);
+        IGasLimitCalculator gasLimitCalculator = _api.AuraGasLimitCalculator = CreateGasLimitCalculator(producerEnv.ReadOnlyTxProcessingEnv);
 
         IBlockProducer blockProducer = new AuRaBlockProducer(
             producerEnv.TxSource,
@@ -99,7 +97,7 @@ public class StartBlockProducerAuRa : Module
             _api.BlockTree,
             _api.Timestamper,
             StepCalculator,
-            _auraApi.ReportingValidator,
+            _api.ReportingValidator,
             _auraConfig,
             gasLimitCalculator,
             _api.SpecProvider,
@@ -112,7 +110,7 @@ public class StartBlockProducerAuRa : Module
     private BlockProcessor CreateBlockProcessor(ReadOnlyTxProcessingEnv changeableTxProcessingEnv, ReadOnlyTxProcessingEnv constantContractTxProcessingEnv)
     {
         if (_api.RewardCalculatorSource is null) throw new StepDependencyException(nameof(_api.RewardCalculatorSource));
-        if (_auraApi.ValidatorStore is null) throw new StepDependencyException(nameof(_auraApi.ValidatorStore));
+        if (_api.ValidatorStore is null) throw new StepDependencyException(nameof(_api.ValidatorStore));
         if (_api.ChainSpec is null) throw new StepDependencyException(nameof(_api.ChainSpec));
         if (_api.BlockTree is null) throw new StepDependencyException(nameof(_api.BlockTree));
         if (_api.EngineSigner is null) throw new StepDependencyException(nameof(_api.EngineSigner));
@@ -122,19 +120,19 @@ public class StartBlockProducerAuRa : Module
         var chainSpecAuRa = _api.ChainSpec.AuRa;
 
         ITxFilter auRaTxFilter = TxAuRaFilterBuilders.CreateAuRaTxFilter(
-            _auraApi,
+            _api,
             constantContractTxProcessingEnv,
             _api.SpecProvider,
             new LocalTxFilter(_api.EngineSigner));
 
-        _validator = new AuRaValidatorFactory(_auraApi.AbiEncoder,
+        _validator = new AuRaValidatorFactory(_api.AbiEncoder,
                 changeableTxProcessingEnv.StateProvider,
                 changeableTxProcessingEnv.TransactionProcessor,
                 changeableTxProcessingEnv.BlockTree,
                 constantContractTxProcessingEnv,
                 _api.ReceiptStorage,
-                _auraApi.ValidatorStore,
-                _auraApi.FinalizationManager,
+                _api.ValidatorStore,
+                _api.FinalizationManager,
                 NullTxSender.Instance,
                 NullTxPool.Instance,
                 NethermindApi.Config<IBlocksConfig>(),
@@ -142,7 +140,7 @@ public class StartBlockProducerAuRa : Module
                 _api.EngineSigner,
                 _api.SpecProvider,
                 _api.GasPriceOracle,
-                _auraApi.ReportingContractValidatorCache, chainSpecAuRa.PosdaoTransition, true)
+                _api.ReportingContractValidatorCache, chainSpecAuRa.PosdaoTransition, true)
             .CreateValidatorProcessor(chainSpecAuRa.Validators, _api.BlockTree.Head?.Header);
 
         if (_validator is IDisposable disposableValidator)
@@ -177,11 +175,11 @@ public class StartBlockProducerAuRa : Module
         IReadOnlyTxProcessorSource readOnlyTxProcessorSourceForTxPriority =
             new ReadOnlyTxProcessingEnv(_api.WorldStateManager!, _api.BlockTree, _api.SpecProvider, _api.LogManager);
 
-        (_txPriorityContract, _localDataSource) = TxAuRaFilterBuilders.CreateTxPrioritySources(_auraConfig, _auraApi, readOnlyTxProcessorSourceForTxPriority);
+        (_txPriorityContract, _localDataSource) = TxAuRaFilterBuilders.CreateTxPrioritySources(_auraConfig, _api, readOnlyTxProcessorSourceForTxPriority);
 
         if (_txPriorityContract is not null || _localDataSource is not null)
         {
-            _minGasPricesContractDataStore = TxAuRaFilterBuilders.CreateMinGasPricesDataStore(_auraApi, _txPriorityContract, _localDataSource)!;
+            _minGasPricesContractDataStore = TxAuRaFilterBuilders.CreateMinGasPricesDataStore(_api, _txPriorityContract, _localDataSource)!;
             _api.DisposeStack.Push(_minGasPricesContractDataStore);
 
             ContractDataStore<Address> whitelistContractDataStore = new ContractDataStoreWithLocalData<Address>(
@@ -288,8 +286,8 @@ public class StartBlockProducerAuRa : Module
 
     private ITxFilter CreateAuraTxFilterForProducer(IReadOnlyTxProcessorSource readOnlyTxProcessorSource, ISpecProvider specProvider) =>
         TxAuRaFilterBuilders.CreateAuRaTxFilterForProducer(
-            _api.Config<IBlocksConfig>(),
-            _auraApi,
+            NethermindApi.Config<IBlocksConfig>(),
+            _api,
             readOnlyTxProcessorSource,
             _minGasPricesContractDataStore,
             specProvider);
@@ -364,7 +362,7 @@ public class StartBlockProducerAuRa : Module
             txSource = new GeneratedTxSource(txSource, transactionSealer, processingEnv.StateReader, _api.LogManager);
         }
 
-        ITxFilter? txPermissionFilter = TxAuRaFilterBuilders.CreateTxPermissionFilter(_auraApi, readOnlyTxProcessorSource);
+        ITxFilter? txPermissionFilter = TxAuRaFilterBuilders.CreateTxPermissionFilter(_api, readOnlyTxProcessorSource);
         if (txPermissionFilter is not null)
         {
             // we now only need to filter generated transactions here, as regular ones are filtered on TxPoolTxSource filter based on CreateTxSourceFilter method
@@ -391,7 +389,7 @@ public class StartBlockProducerAuRa : Module
                                 blockGasLimitContractTransition.Key,
                                 readOnlyTxProcessorSource))
                         .ToArray<IBlockGasLimitContract>(),
-                    _auraApi.GasLimitCalculatorCache,
+                    _api.GasLimitCalculatorCache,
                     _auraConfig?.Minimum2MlnGasPerBlockWhenUsingBlockGasLimitContract == true,
                     gasLimitCalculator,
                     _api.LogManager);

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System.Linq;
-using Nethermind.Api;
 using Nethermind.Core;
 using Nethermind.Init.Steps;
 using Nethermind.Int256;
@@ -13,7 +12,7 @@ namespace Nethermind.Consensus.AuRa.InitializationSteps
 {
     public class LoadGenesisBlockAuRa : LoadGenesisBlock
     {
-        private readonly INethermindApi _api;
+        private readonly AuRaNethermindApi _api;
 
         public LoadGenesisBlockAuRa(AuRaNethermindApi api) : base(api)
         {

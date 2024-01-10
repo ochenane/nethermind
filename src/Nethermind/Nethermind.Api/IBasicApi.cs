@@ -30,35 +30,29 @@ namespace Nethermind.Api
         DisposableStack DisposeStack { get; }
 
         IAbiEncoder AbiEncoder { get; }
+
+        ChainSpec ChainSpec { get; }
+        IConfigProvider ConfigProvider { get; }
+        ICryptoRandom CryptoRandom { get; }
         IDbProvider? DbProvider { get; set; }
         IRocksDbFactory? RocksDbFactory { get; set; }
         IMemDbFactory? MemDbFactory { get; set; }
         IEthereumEcdsa? EthereumEcdsa { get; set; }
+        IJsonSerializer EthereumJsonSerializer { get; }
+        IFileSystem FileSystem { get; }
+        IKeyStore KeyStore { get; }
+        ILogManager LogManager { get; }
+        IReadOnlyList<INethermindPlugin> Plugins { get; }
         string SealEngineType { get; }
+        ISpecProvider? SpecProvider { get; }
         ISyncModeSelector SyncModeSelector { get; set; }
         IBetterPeerStrategy? BetterPeerStrategy { get; set; }
+        ITimestamper Timestamper { get; }
+        ITimerFactory TimerFactory { get; }
+        IProcessExitSource? ProcessExit { get; }
 
-        // TODO: Eventually, no part should use this
+        // TODO: Eventually, no code should use this
         ILifetimeScope BaseContainer { get; }
-
-        // Put these in the same place so that we can double check that its no longer used.
-        // Every time we migrate to dependency injection, always put it here so that we can keep track what can be
-        // removed. Eventually, there should not be any of these left.
-        IProcessExitSource? ProcessExit => BaseContainer.Resolve<IProcessExitSource>();
-        ISpecProvider? SpecProvider => BaseContainer.Resolve<ISpecProvider>();
-        ChainSpec ChainSpec => BaseContainer.Resolve<ChainSpec>();
-        ICryptoRandom CryptoRandom => BaseContainer.Resolve<ICryptoRandom>();
-        IGasLimitCalculator GasLimitCalculator => BaseContainer.Resolve<IGasLimitCalculator>();
-        IConfigProvider ConfigProvider => BaseContainer.Resolve<IConfigProvider>();
-        ILogManager LogManager => BaseContainer.Resolve<ILogManager>();
-        IJsonSerializer EthereumJsonSerializer => BaseContainer.Resolve<IJsonSerializer>();
-        ITimerFactory TimerFactory => BaseContainer.Resolve<ITimerFactory>();
-        INodeStatsManager NodeStatsManager => BaseContainer.Resolve<INodeStatsManager>();
-        IKeyStore KeyStore => BaseContainer.Resolve<IKeyStore>();
-        ITimestamper Timestamper => BaseContainer.Resolve<ITimestamper>();
-        IWallet Wallet => BaseContainer.Resolve<IWallet>();
-        IFileSystem FileSystem => BaseContainer.Resolve<IFileSystem>();
-        IReadOnlyList<INethermindPlugin> Plugins => BaseContainer.Resolve<IReadOnlyList<INethermindPlugin>>();
 
         public IConsensusPlugin? GetConsensusPlugin() =>
             Plugins

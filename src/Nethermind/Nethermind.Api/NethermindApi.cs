@@ -24,6 +24,7 @@ using Nethermind.Consensus.Validators;
 using Nethermind.Core;
 using Nethermind.Core.Authentication;
 using Nethermind.Core.PubSub;
+using Nethermind.Core.Specs;
 using Nethermind.Core.Timers;
 using Nethermind.Crypto;
 using Nethermind.Db;
@@ -36,10 +37,13 @@ using Nethermind.JsonRpc;
 using Nethermind.JsonRpc.Modules;
 using Nethermind.JsonRpc.Modules.Eth.GasPrice;
 using Nethermind.JsonRpc.Modules.Subscribe;
+using Nethermind.KeyStore;
+using Nethermind.Logging;
 using Nethermind.Monitoring;
 using Nethermind.Network;
 using Nethermind.Network.P2P.Analyzers;
 using Nethermind.Network.Rlpx;
+using Nethermind.Serialization.Json;
 using Nethermind.State;
 using Nethermind.State.Repositories;
 using Nethermind.Synchronization;
@@ -49,6 +53,8 @@ using Nethermind.Trie.Pruning;
 using Nethermind.TxPool;
 using Nethermind.Wallet;
 using Nethermind.Sockets;
+using Nethermind.Specs.ChainSpecStyle;
+using Nethermind.Stats;
 
 namespace Nethermind.Api
 {
@@ -67,11 +73,11 @@ namespace Nethermind.Api
             ReadOnlyTxProcessingEnv readOnlyTxProcessingEnv = new(
                 WorldStateManager!,
                 readOnlyTree,
-                ((INethermindApi)this).SpecProvider,
-                ((INethermindApi)this).LogManager);
+                SpecProvider,
+                LogManager);
 
-            IMiningConfig miningConfig = ((INethermindApi)this).ConfigProvider.GetConfig<IMiningConfig>();
-            IBlocksConfig blocksConfig = ((INethermindApi)this).ConfigProvider.GetConfig<IBlocksConfig>();
+            IMiningConfig miningConfig = ConfigProvider.GetConfig<IMiningConfig>();
+            IBlocksConfig blocksConfig = ConfigProvider.GetConfig<IBlocksConfig>();
 
             return new BlockchainBridge(
                 readOnlyTxProcessingEnv,
@@ -80,9 +86,9 @@ namespace Nethermind.Api
                 FilterStore,
                 FilterManager,
                 EthereumEcdsa,
-                ((INethermindApi)this).Timestamper,
+                Timestamper,
                 LogFinder,
-                ((INethermindApi)this).SpecProvider!,
+                SpecProvider!,
                 blocksConfig,
                 miningConfig.Enabled
             );
@@ -99,6 +105,8 @@ namespace Nethermind.Api
         public IBlockValidator? BlockValidator { get; set; }
         public IBloomStorage? BloomStorage { get; set; }
         public IChainLevelInfoRepository? ChainLevelInfoRepository { get; set; }
+        public IConfigProvider ConfigProvider => BaseContainer.Resolve<IConfigProvider>();
+        public ICryptoRandom CryptoRandom=> BaseContainer.Resolve<CryptoRandom>();
         public IDbProvider? DbProvider { get; set; }
         public IRocksDbFactory? RocksDbFactory { get; set; }
         public IMemDbFactory? MemDbFactory { get; set; }
@@ -108,6 +116,7 @@ namespace Nethermind.Api
         public ISignerStore? EngineSignerStore { get; set; }
         public IEnode? Enode { get; set; }
         public IEthereumEcdsa? EthereumEcdsa { get; set; }
+        public IFileSystem FileSystem => BaseContainer.Resolve<IFileSystem>();
         public IFilterStore? FilterStore { get; set; }
         public IFilterManager? FilterManager { get; set; }
         public IUnclesValidator? UnclesValidator { get; set; }
@@ -117,10 +126,15 @@ namespace Nethermind.Api
         public IManualBlockProductionTrigger ManualBlockProductionTrigger { get; set; } =
             new BuildBlocksWhenRequested();
 
+        public IJsonSerializer EthereumJsonSerializer => BaseContainer.Resolve<IJsonSerializer>();
+        public IKeyStore KeyStore => BaseContainer.Resolve<IKeyStore>();
+
         public ILogFinder? LogFinder { get; set; }
+        public ILogManager LogManager => BaseContainer.Resolve<ILogManager>();
         public IMessageSerializationService MessageSerializationService { get; } = new MessageSerializationService();
         public IGossipPolicy GossipPolicy { get; set; } = Policy.FullGossip;
         public IMonitoringService MonitoringService { get; set; } = NullMonitoringService.Instance;
+        public INodeStatsManager NodeStatsManager => BaseContainer.Resolve<INodeStatsManager>();
         public IPeerManager? PeerManager { get; set; }
         public IPeerPool? PeerPool { get; set; }
         public IProtocolsManager? ProtocolsManager { get; set; }
@@ -137,8 +151,7 @@ namespace Nethermind.Api
         public IJsonRpcLocalStats? JsonRpcLocalStats { get; set; }
         public ISealer? Sealer { get; set; } = NullSealEngine.Instance;
 
-        private string? _sealEngineType = null;
-        public string SealEngineType => _sealEngineType ??= ((INethermindApi)this).ChainSpec.SealEngineType;
+        public string SealEngineType => ChainSpec.SealEngineType;
         public ISealValidator? SealValidator { get; set; } = NullSealEngine.Instance;
         private ISealEngine? _sealEngine;
         public ISealEngine SealEngine
@@ -155,6 +168,7 @@ namespace Nethermind.Api
         }
 
         public ISessionMonitor? SessionMonitor { get; set; }
+        public ISpecProvider SpecProvider => BaseContainer.Resolve<ISpecProvider>();
         public IPoSSwitcher PoSSwitcher { get; set; } = NoPoS.Instance;
         public ISyncModeSelector SyncModeSelector { get; set; } = null!;
 
@@ -170,6 +184,8 @@ namespace Nethermind.Api
         public IWorldStateManager? WorldStateManager { get; set; }
         public IStateReader? StateReader { get; set; }
         public IStaticNodesManager? StaticNodesManager { get; set; }
+        public ITimestamper Timestamper => BaseContainer.Resolve<ITimestamper>();
+        public ITimerFactory TimerFactory => BaseContainer.Resolve<ITimerFactory>();
         public ITransactionProcessor? TransactionProcessor { get; set; }
         public ITrieStore? TrieStore { get; set; }
         public ITxSender? TxSender { get; set; }
@@ -180,22 +196,28 @@ namespace Nethermind.Api
         public IRpcCapabilitiesProvider? RpcCapabilitiesProvider { get; set; }
         public ITxValidator? TxValidator { get; set; }
         public IBlockFinalizationManager? FinalizationManager { get; set; }
+        public IGasLimitCalculator GasLimitCalculator => BaseContainer.Resolve<IGasLimitCalculator>();
         public IBlockProducerEnvFactory? BlockProducerEnvFactory { get; set; }
         public IGasPriceOracle? GasPriceOracle { get; set; }
 
         public IEthSyncingInfo? EthSyncingInfo { get; set; }
         public IBlockProductionPolicy? BlockProductionPolicy { get; set; }
+        public IWallet Wallet => BaseContainer.Resolve<IWallet>();
         public IBlockStore? BadBlocksStore { get; set; }
         public ITransactionComparerProvider? TransactionComparerProvider { get; set; }
         public IWebSocketsManager WebSocketsManager { get; set; } = new WebSocketsManager();
 
         public ISubscriptionFactory? SubscriptionFactory { get; set; }
 
+        public ChainSpec ChainSpec => BaseContainer.Resolve<ChainSpec>();
+
         // Note: when migrating to dependency injection, the component implementing `IDispose` is automatically disposed
         // on autofac context dispose, so registering to this is no longer required.
         public DisposableStack DisposeStack { get; } = new();
+        public IReadOnlyList<INethermindPlugin> Plugins => BaseContainer.Resolve<IReadOnlyList<INethermindPlugin>>();
         public IList<IPublisher> Publishers { get; } = new List<IPublisher>(); // this should be called publishers
         public CompositePruningTrigger PruningTrigger { get; } = new();
+        public IProcessExitSource ProcessExit => BaseContainer.Resolve<IProcessExitSource>();
         public CompositeTxGossipPolicy TxGossipPolicy { get; } = new();
 
         public ILifetimeScope BaseContainer { get; set; }

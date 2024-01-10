@@ -31,6 +31,7 @@ namespace Nethermind.Api
         IMessageSerializationService MessageSerializationService { get; }
         IGossipPolicy GossipPolicy { get; set; }
         IMonitoringService MonitoringService { get; set; }
+        INodeStatsManager NodeStatsManager { get; }
         IPeerManager? PeerManager { get; set; }
         IPeerPool? PeerPool { get; set; }
         IProtocolsManager? ProtocolsManager { get; set; }

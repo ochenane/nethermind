@@ -1,12 +1,13 @@
 using Autofac;
 using Autofac.Core;
 using Nethermind.Api;
+using Nethermind.Api.Extensions;
 using Nethermind.Config;
 using Nethermind.Init.Steps;
 
 namespace Nethermind.Init.Snapshot;
 
-public class SnapshotPlugin : Module
+public class SnapshotPlugin : Module, INethermindPlugin
 {
     public string Name => "Snapshot";
 
@@ -17,9 +18,6 @@ public class SnapshotPlugin : Module
     public Task Init(INethermindApi api) => Task.CompletedTask;
     public Task InitNetworkProtocol() => Task.CompletedTask;
     public Task InitRpcModules() => Task.CompletedTask;
-
-    public bool ShouldRunSteps(INethermindApi api) =>
-        api.Config<ISnapshotConfig>() is { Enabled: true, DownloadUrl: not null };
 
     public IModule? GetModule(string engineType, IConfigProvider configProvider)
     {

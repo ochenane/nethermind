@@ -19,7 +19,7 @@ using Nethermind.Wallet;
 namespace Nethermind.Init.Steps;
 
 [RunnerStepDependencies(typeof(ResolveIps))]
-public class AfterResolveIps : IStep
+public class SetupKeyStore : IStep
 {
     private readonly IApiWithNetwork _api;
     private readonly ProtectedPrivateKey _nodeKey;
@@ -28,7 +28,7 @@ public class AfterResolveIps : IStep
     private readonly IDiscoveryConfig _discoveryConfig;
     private readonly ILogManager _logManager;
 
-    public AfterResolveIps(
+    public SetupKeyStore(
         INethermindApi api,
         [KeyFilter(PrivateKeyName.NodeKey)] ProtectedPrivateKey nodeKey,
         ChainSpec chainSpec,
