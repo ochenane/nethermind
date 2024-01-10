@@ -21,11 +21,14 @@ public class KeyStoreModule : Module
         builder.RegisterType<FileKeyStore>()
             .As<IKeyStore>()
             .SingleInstance();
+
         builder.Register<ICryptoRandom, ITimestamper, IKeyStoreConfig, ProtectedPrivateKeyFactory>(CreateProtectedKeyFactory)
             .As<IProtectedPrivateKeyFactory>()
             .SingleInstance();
+
         builder.Register(CreateWallet)
             .SingleInstance();
+
         builder.Register(CreateNodeKeyManager)
             .SingleInstance();
 
@@ -45,30 +48,30 @@ public class KeyStoreModule : Module
 
     private IWallet CreateWallet(IComponentContext ctx)
     {
-        return ctx.Resolve<IInitConfig>() switch
+        IWallet wallet = ctx.Resolve<IInitConfig>() switch
         {
             var config when config.EnableUnsecuredDevWallet && config.KeepDevWalletInMemory => ctx.Resolve<DevWallet>(),
             var config when config.EnableUnsecuredDevWallet && !config.KeepDevWalletInMemory => ctx.Resolve<DevKeyStoreWallet>(),
             _ => ctx.Resolve<ProtectedKeyStoreWallet>()
         };
+
+        // Unlock the wallet with KeyStorePasswordProvider. Does not use password from console for some reason.
+        IKeyStoreConfig keyStoreConfig = ctx.Resolve<IKeyStoreConfig>();
+        ILogManager logManager = ctx.Resolve<ILogManager>();
+        new AccountUnlocker(keyStoreConfig, wallet, logManager, new KeyStorePasswordProvider(keyStoreConfig))
+            .UnlockAccounts();
+
+        return wallet;
     }
 
     private INodeKeyManager CreateNodeKeyManager(IComponentContext ctx)
     {
-        // Doing things manually here because there seems to be some kind of interactivity
         IKeyStoreConfig keyStoreConfig = ctx.Resolve<IKeyStoreConfig>();
-        IWallet wallet = ctx.Resolve<IWallet>();
-        ICryptoRandom cryptoRandom = ctx.Resolve<ICryptoRandom>();
-        IFileSystem fileSystem = ctx.Resolve<IFileSystem>();
-        IKeyStore keyStore = ctx.Resolve<IKeyStore>();
-        ILogManager logManager = ctx.Resolve<ILogManager>();
-
-        new AccountUnlocker(keyStoreConfig, wallet, logManager, new KeyStorePasswordProvider(keyStoreConfig))
-            .UnlockAccounts();
 
         BasePasswordProvider passwordProvider = new KeyStorePasswordProvider(keyStoreConfig)
             .OrReadFromConsole($"Provide password for validator account {keyStoreConfig.BlockAuthorAccount}");
 
-        return new NodeKeyManager(cryptoRandom, keyStore, keyStoreConfig, logManager, passwordProvider, fileSystem);
+        // NodeKeyManager need password provider, but it can use console for some reason.
+        return ctx.Resolve<NodeKeyManager>(new TypedParameter(typeof(IPasswordProvider), passwordProvider));
     }
 }
