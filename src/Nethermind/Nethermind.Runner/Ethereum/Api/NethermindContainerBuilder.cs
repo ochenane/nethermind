@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading;
 using Autofac;
 using Autofac.Core;
+using Autofac.Features.ResolveAnything;
 using Nethermind.Api;
 using Nethermind.Api.Extensions;
 using Nethermind.Config;
@@ -65,6 +66,7 @@ namespace Nethermind.Runner.Ethereum.Api
             containerBuilder.RegisterModule(new NetworkModule());
             containerBuilder.RegisterModule(new KeyStoreModule());
             containerBuilder.RegisterModule(new StepModule());
+            containerBuilder.RegisterModule(new RunnerModule());
 
             foreach (INethermindPlugin nethermindPlugin in plugins)
             {

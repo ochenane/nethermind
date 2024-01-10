@@ -193,7 +193,7 @@ namespace Nethermind.Api
         public ISubscriptionFactory? SubscriptionFactory { get; set; }
 
         private ProtectedPrivateKey? _nodeKey;
-        public ProtectedPrivateKey? NodeKey => _nodeKey ??= BaseContainer.Resolve<INodeKeyManager>().LoadNodeKey();
+        public ProtectedPrivateKey? NodeKey => _nodeKey ??= BaseContainer.ResolveKeyed<ProtectedPrivateKey>(PrivateKeyName.NodeKey);
 
         /// <summary>
         /// Key used for signing blocks. Original as its loaded on startup. This can later be changed via RPC in <see cref="Signer"/>.
@@ -201,7 +201,7 @@ namespace Nethermind.Api
         private ProtectedPrivateKey? _originalSignerKey;
 
         public ProtectedPrivateKey? OriginalSignerKey =>
-            _originalSignerKey ??= BaseContainer.Resolve<INodeKeyManager>().LoadSignerKey();
+            _originalSignerKey ??=  BaseContainer.ResolveKeyed<ProtectedPrivateKey>(PrivateKeyName.SignerKey);
 
         // Note: when migrating to dependency injection, the component implementing `IDispose` is automatically disposed
         // on autofac context dispose, so registering to this is no longer required.

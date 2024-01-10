@@ -28,6 +28,14 @@ public class KeyStoreModule : Module
             .SingleInstance();
         builder.Register(CreateNodeKeyManager)
             .SingleInstance();
+
+        builder.Register<INodeKeyManager, ProtectedPrivateKey>((keyManager) => keyManager.LoadNodeKey())
+            .Keyed<ProtectedPrivateKey>(PrivateKeyName.NodeKey)
+            .SingleInstance();
+
+        builder.Register<INodeKeyManager, ProtectedPrivateKey>((keyManager) => keyManager.LoadSignerKey())
+            .Keyed<ProtectedPrivateKey>(PrivateKeyName.SignerKey)
+            .SingleInstance();
     }
 
     private ProtectedPrivateKeyFactory CreateProtectedKeyFactory(ICryptoRandom cryptoRandom, ITimestamper timeStamper, IKeyStoreConfig keyStoreConfig)

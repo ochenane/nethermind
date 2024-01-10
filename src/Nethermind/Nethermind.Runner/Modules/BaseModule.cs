@@ -90,11 +90,6 @@ public class BaseModule : Module
 
         builder.RegisterInstance(new FileSystem())
             .As<IFileSystem>();
-
-        builder.RegisterType<EthereumStepsLoader>()
-            .UsingConstructor(typeof(ILifetimeScope))
-            .As<IEthereumStepsLoader>()
-            .SingleInstance();
     }
 
     private void SetLoggerVariables(ChainSpec chainSpec, ILogManager logManager)

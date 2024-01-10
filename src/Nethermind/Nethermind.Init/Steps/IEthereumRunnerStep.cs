@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Features.AttributeFilters;
 
 namespace Nethermind.Init.Steps
 {
@@ -24,7 +25,9 @@ namespace Nethermind.Init.Steps
             foreach (Type stepType in assembly.GetExportedTypes().Where(IsStepType))
             {
                 builder.RegisterType(stepType)
-                    .As<IStep>();
+                    .AsSelf()
+                    .As<IStep>()
+                    .WithAttributeFiltering();
             }
         }
 
