@@ -53,11 +53,6 @@ namespace Nethermind.Runner.Ethereum
             Task rlpxPeerTask = Stop(() => _api.RlpxPeer?.Shutdown(), "Stopping rlpx peer");
             await Task.WhenAll(discoveryStopTask, rlpxPeerTask, peerManagerTask, synchronizerTask, syncPeerPoolTask, peerPoolTask, blockchainProcessorTask, blockProducerTask);
 
-            foreach (INethermindPlugin plugin in _api.Plugins)
-            {
-                await Stop(async () => await plugin.DisposeAsync(), $"Disposing plugin {plugin.Name}");
-            }
-
             while (_api.DisposeStack.Count != 0)
             {
                 IAsyncDisposable disposable = _api.DisposeStack.Pop();
