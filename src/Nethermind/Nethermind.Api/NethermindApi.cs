@@ -106,7 +106,7 @@ namespace Nethermind.Api
         public IBloomStorage? BloomStorage { get; set; }
         public IChainLevelInfoRepository? ChainLevelInfoRepository { get; set; }
         public IConfigProvider ConfigProvider => BaseContainer.Resolve<IConfigProvider>();
-        public ICryptoRandom CryptoRandom=> BaseContainer.Resolve<CryptoRandom>();
+        public ICryptoRandom CryptoRandom => BaseContainer.Resolve<ICryptoRandom>();
         public IDbProvider? DbProvider { get; set; }
         public IRocksDbFactory? RocksDbFactory { get; set; }
         public IMemDbFactory? MemDbFactory { get; set; }
@@ -128,7 +128,6 @@ namespace Nethermind.Api
 
         public IJsonSerializer EthereumJsonSerializer => BaseContainer.Resolve<IJsonSerializer>();
         public IKeyStore KeyStore => BaseContainer.Resolve<IKeyStore>();
-
         public ILogFinder? LogFinder { get; set; }
         public ILogManager LogManager => BaseContainer.Resolve<ILogManager>();
         public IMessageSerializationService MessageSerializationService { get; } = new MessageSerializationService();
@@ -150,7 +149,6 @@ namespace Nethermind.Api
         public IRpcAuthentication? RpcAuthentication { get; set; }
         public IJsonRpcLocalStats? JsonRpcLocalStats { get; set; }
         public ISealer? Sealer { get; set; } = NullSealEngine.Instance;
-
         public string SealEngineType => ChainSpec.SealEngineType;
         public ISealValidator? SealValidator { get; set; } = NullSealEngine.Instance;
         private ISealEngine? _sealEngine;

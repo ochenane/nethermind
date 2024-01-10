@@ -82,6 +82,7 @@ namespace Nethermind.Api
         /// Currently supported in <see cref="SealEngineType.AuRa"/> and Eth2Merge.
         /// </remarks>
         IBlockFinalizationManager? FinalizationManager { get; set; }
+
         IGasLimitCalculator GasLimitCalculator { get; }
 
         IBlockProducerEnvFactory? BlockProducerEnvFactory { get; set; }

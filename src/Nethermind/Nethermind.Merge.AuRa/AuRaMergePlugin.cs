@@ -28,7 +28,7 @@ namespace Nethermind.Merge.AuRa
 
         public override string Name => "AuRaMerge";
         public override string Description => "AuRa Merge plugin for ETH1-ETH2";
-        protected override bool MergeEnabled => ShouldRun(_api.ChainSpec.SealEngineType, _api.ConfigProvider.GetConfig<IMergeConfig>());
+        protected override bool MergeEnabled => ShouldRun(_api.SealEngineType, _api.ConfigProvider.GetConfig<IMergeConfig>());
 
         public override async Task Init(INethermindApi nethermindApi)
         {
@@ -43,7 +43,7 @@ namespace Nethermind.Merge.AuRa
                 // this runs before all init steps that use tx filters
                 TxAuRaFilterBuilders.CreateFilter = (originalFilter, fallbackFilter) =>
                     originalFilter is MinGasPriceContractTxFilter ? originalFilter
-                    : new AuRaMergeTxFilter(_poSSwitcher, originalFilter, fallbackFilter);
+                        : new AuRaMergeTxFilter(_poSSwitcher, originalFilter, fallbackFilter);
             }
         }
 
@@ -76,12 +76,12 @@ namespace Nethermind.Merge.AuRa
                 _blocksConfig,
                 _api.LogManager);
 
-        public IModule? GetModule(string engineType, IConfigProvider configProvider)
+        public override IModule? GetModule(string engineType, IConfigProvider configProvider)
         {
             var mergeConfig = configProvider.GetConfig<IMergeConfig>();
             if (ShouldRun(engineType, mergeConfig))
             {
-                return this;
+                return new AuraMergeModule();
             }
 
             return null;
@@ -92,12 +92,15 @@ namespace Nethermind.Merge.AuRa
             return mergeConfig.Enabled && engineType == SealEngineType.AuRa;
         }
 
-        protected override void Load(ContainerBuilder builder)
+        private class AuraMergeModule : Module
         {
-            base.Load(builder);
+            protected override void Load(ContainerBuilder builder)
+            {
+                base.Load(builder);
 
-            builder.RegisterIStepsFromAssembly(typeof(MergePlugin).Assembly);
-            builder.RegisterIStepsFromAssembly(GetType().Assembly);
+                builder.RegisterIStepsFromAssembly(typeof(MergePlugin).Assembly);
+                builder.RegisterIStepsFromAssembly(GetType().Assembly);
+            }
         }
     }
 }

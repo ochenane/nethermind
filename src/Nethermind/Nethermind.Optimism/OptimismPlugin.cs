@@ -21,11 +21,16 @@ using Nethermind.Merge.Plugin.InvalidChainTracker;
 using Nethermind.Blockchain;
 using Nethermind.Consensus.Rewards;
 using Nethermind.Merge.Plugin.Synchronization;
+using Nethermind.Synchronization.Reporting;
 using Nethermind.Synchronization.ParallelSync;
+using System.Threading;
 using Autofac;
 using Autofac.Core;
 using Nethermind.HealthChecks;
 using Nethermind.Init.Steps;
+using Nethermind.Serialization.Json;
+using Nethermind.Specs.ChainSpecStyle;
+using Nethermind.Trie.Pruning;
 
 namespace Nethermind.Optimism;
 
@@ -35,8 +40,7 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
     public string Name => "Optimism";
     public string Description => "Optimism support for Nethermind";
 
-    private INethermindApi? _api;
-    private OptimismNethermindApi? _optApi;
+    private OptimismNethermindApi? _api;
     private ILogger _logger = null!;
     private IMergeConfig _mergeConfig = null!;
     private ISyncConfig _syncConfig = null!;
@@ -48,6 +52,9 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
     private IBeaconPivot? _beaconPivot;
     private BeaconSync? _beaconSync;
 
+    private bool ShouldRunSteps(INethermindApi api) => ShouldRunSteps(api.SealEngineType);
+
+    private bool ShouldRunSteps(string engineType) => engineType == SealEngineType;
 
     #region IConsensusPlugin
 
@@ -75,8 +82,7 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
         if (!ShouldRunSteps(api))
             return Task.CompletedTask;
 
-        _optApi = (OptimismNethermindApi)api;
-        _api = api;
+        _api = (OptimismNethermindApi)api;
         _mergeConfig = _api.Config<IMergeConfig>();
         _syncConfig = _api.Config<ISyncConfig>();
         _blocksConfig = _api.Config<IBlocksConfig>();
@@ -89,7 +95,7 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
 
         _blockCacheService = new BlockCacheService();
         _api.EthereumEcdsa = new OptimismEthereumEcdsa(_api.EthereumEcdsa);
-        _optApi.InvalidChainTracker = _invalidChainTracker = new InvalidChainTracker(
+        _api.InvalidChainTracker = _invalidChainTracker = new InvalidChainTracker(
             _api.PoSSwitcher,
             _api.BlockTree,
             _blockCacheService,
@@ -262,16 +268,6 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     public bool MustInitialize => true;
-
-    private bool ShouldRunSteps(INethermindApi api)
-    {
-        return ShouldRunSteps(api.SealEngineType);
-    }
-
-    private bool ShouldRunSteps(string engineType)
-    {
-        return engineType == SealEngineType;
-    }
 
     public IModule? GetModule(string engineType, IConfigProvider configProvider)
     {

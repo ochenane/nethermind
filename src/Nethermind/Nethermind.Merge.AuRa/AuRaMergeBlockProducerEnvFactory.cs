@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2023 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
-using Nethermind.Api;
 using Nethermind.Blockchain;
 using Nethermind.Blockchain.Receipts;
 using Nethermind.Config;
@@ -68,7 +67,7 @@ public class AuRaMergeBlockProducerEnvFactory : BlockProducerEnvFactory
         ILogManager logManager,
         IBlocksConfig blocksConfig)
     {
-        var withdrawalContractFactory = new WithdrawalContractFactory(((INethermindApi)_auraApi).ChainSpec!.AuRa, _auraApi.AbiEncoder);
+        var withdrawalContractFactory = new WithdrawalContractFactory(_auraApi.ChainSpec!.AuRa, _auraApi.AbiEncoder);
 
         return new AuRaMergeBlockProcessor(
             specProvider,

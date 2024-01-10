@@ -12,13 +12,11 @@ namespace Nethermind.Optimism;
 
 public class InitializeBlockProducerOptimism : InitializeBlockProducer
 {
-    private readonly INethermindApi _api;
-    private readonly OptimismNethermindApi _opApi;
+    private readonly OptimismNethermindApi _api;
 
     public InitializeBlockProducerOptimism(OptimismNethermindApi api) : base(api)
     {
         _api = api;
-        _opApi = api;
     }
 
     protected override Task<IBlockProducer> BuildProducer()
@@ -31,8 +29,8 @@ public class InitializeBlockProducerOptimism : InitializeBlockProducer
         if (_api.TxPool is null) throw new StepDependencyException(nameof(_api.TxPool));
         if (_api.TransactionComparerProvider is null) throw new StepDependencyException(nameof(_api.TransactionComparerProvider));
         if (_api.BlockValidator is null) throw new StepDependencyException(nameof(_api.BlockValidator));
-        if (_opApi.SpecHelper is null) throw new StepDependencyException(nameof(_opApi.SpecHelper));
-        if (_opApi.L1CostHelper is null) throw new StepDependencyException(nameof(_opApi.L1CostHelper));
+        if (_api.SpecHelper is null) throw new StepDependencyException(nameof(_api.SpecHelper));
+        if (_api.L1CostHelper is null) throw new StepDependencyException(nameof(_api.L1CostHelper));
         if (_api.WorldStateManager is null) throw new StepDependencyException(nameof(_api.WorldStateManager));
 
         _api.BlockProducerEnvFactory = new OptimismBlockProducerEnvFactory(
@@ -47,8 +45,8 @@ public class InitializeBlockProducerOptimism : InitializeBlockProducer
             _api.TxPool,
             _api.TransactionComparerProvider,
             _api.Config<IBlocksConfig>(),
-            _opApi.SpecHelper,
-            _opApi.L1CostHelper,
+            _api.SpecHelper,
+            _api.L1CostHelper,
             _api.LogManager);
 
         BlockProducerEnv producerEnv = _api.BlockProducerEnvFactory.Create();

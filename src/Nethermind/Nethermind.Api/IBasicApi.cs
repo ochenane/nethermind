@@ -30,7 +30,6 @@ namespace Nethermind.Api
         DisposableStack DisposeStack { get; }
 
         IAbiEncoder AbiEncoder { get; }
-
         ChainSpec ChainSpec { get; }
         IConfigProvider ConfigProvider { get; }
         ICryptoRandom CryptoRandom { get; }
