@@ -5,6 +5,7 @@ using Autofac;
 using Nethermind.Core.Timers;
 using Nethermind.Evm.Tracing.GethStyle.JavaScript;
 using Nethermind.Logging;
+using Nethermind.Network;
 using Nethermind.Network.Config;
 using Nethermind.Stats;
 
@@ -20,6 +21,11 @@ public class NetworkModule : Module
         builder.Register<ITimerFactory, INetworkConfig, ILogManager, NodeStatsManager>(
                 (tf, nc, lm) => new NodeStatsManager(tf, lm, nc.MaxCandidatePeerCount))
             .As<INodeStatsManager>()
+            .SingleInstance();
+
+        builder.RegisterType<IPResolver>()
+            .AsSelf()
+            .As<IIPResolver>()
             .SingleInstance();
     }
 }

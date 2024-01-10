@@ -57,7 +57,6 @@ public static class NettyMemoryEstimator
 
 [RunnerStepDependencies(
     typeof(LoadGenesisBlock),
-    typeof(UpdateDiscoveryConfig),
     typeof(ResolveIps),
     typeof(InitializePlugins),
     typeof(InitializeBlockchain))]
@@ -70,10 +69,12 @@ public class InitializeNetwork : IStep
     private readonly ILogger _logger;
     private readonly INetworkConfig _networkConfig;
     protected readonly ISyncConfig _syncConfig;
+    private readonly IPResolver _ipResolver;
 
-    public InitializeNetwork(INethermindApi api)
+    public InitializeNetwork(INethermindApi api, IPResolver ipResolver)
     {
         _api = api;
+        _ipResolver = ipResolver;
         _logger = _api.LogManager.GetClassLogger();
         _networkConfig = _api.Config<INetworkConfig>();
         _syncConfig = _api.Config<ISyncConfig>();
@@ -385,7 +386,7 @@ public class InitializeNetwork : IStep
     {
         NodeRecord selfNodeRecord = new();
         selfNodeRecord.SetEntry(IdEntry.Instance);
-        selfNodeRecord.SetEntry(new IpEntry(_api.IpResolver!.ExternalIp));
+        selfNodeRecord.SetEntry(new IpEntry(_ipResolver!.ExternalIp));
         selfNodeRecord.SetEntry(new TcpEntry(_networkConfig.P2PPort));
         selfNodeRecord.SetEntry(new UdpEntry(_networkConfig.DiscoveryPort));
         selfNodeRecord.SetEntry(new Secp256K1Entry(_api.NodeKey!.CompressedPublicKey));
