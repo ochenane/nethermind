@@ -374,7 +374,6 @@ public partial class MergePlugin : Module, IConsensusWrapperPlugin, ISynchroniza
             if (_api.BetterPeerStrategy is null) throw new ArgumentNullException(nameof(_api.BetterPeerStrategy));
             if (_api.SealValidator is null) throw new ArgumentNullException(nameof(_api.SealValidator));
             if (_api.UnclesValidator is null) throw new ArgumentNullException(nameof(_api.UnclesValidator));
-            if (_api.NodeStatsManager is null) throw new ArgumentNullException(nameof(_api.NodeStatsManager));
             if (_api.HeaderValidator is null) throw new ArgumentNullException(nameof(_api.HeaderValidator));
             if (_api.PeerDifficultyRefreshPool is null) throw new ArgumentNullException(nameof(_api.PeerDifficultyRefreshPool));
             if (_api.StateReader is null) throw new ArgumentNullException(nameof(_api.StateReader));

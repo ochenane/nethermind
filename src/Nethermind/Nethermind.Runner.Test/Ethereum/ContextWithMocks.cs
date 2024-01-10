@@ -96,7 +96,6 @@ namespace Nethermind.Runner.Test.Ethereum
                 FilterStore = Substitute.For<IFilterStore>(),
                 GrpcServer = Substitute.For<IGrpcServer>(),
                 HeaderValidator = Substitute.For<IHeaderValidator>(),
-                IpResolver = Substitute.For<IIPResolver>(),
                 LogFinder = Substitute.For<ILogFinder>(),
                 MonitoringService = Substitute.For<IMonitoringService>(),
                 ProtocolsManager = Substitute.For<IProtocolsManager>(),

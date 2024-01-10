@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac.Features.AttributeFilters;
 using Nethermind.Api;
 using Nethermind.Api.Extensions;
 using Nethermind.Blockchain.Synchronization;
@@ -41,6 +42,7 @@ using Nethermind.Synchronization.Reporting;
 using Nethermind.Synchronization.SnapSync;
 using Nethermind.Synchronization.Trie;
 using Nethermind.TxPool;
+using Nethermind.Wallet;
 
 namespace Nethermind.Init.Steps;
 
@@ -71,13 +73,26 @@ public class InitializeNetwork : IStep
     protected readonly ISyncConfig _syncConfig;
     private readonly IPResolver _ipResolver;
 
-    public InitializeNetwork(INethermindApi api, IPResolver ipResolver)
+    private ProtectedPrivateKey _nodeKey;
+    private CryptoRandom _cryptoRandom;
+
+    public InitializeNetwork(
+        INethermindApi api,
+        IPResolver ipResolver,
+        [KeyFilter(PrivateKeyName.NodeKey)] ProtectedPrivateKey nodeKey,
+        CryptoRandom cryptoRandom,
+        ILogManager logManager,
+        INetworkConfig networkConfig,
+        ISyncConfig syncConfig
+    )
     {
         _api = api;
         _ipResolver = ipResolver;
-        _logger = _api.LogManager.GetClassLogger();
-        _networkConfig = _api.Config<INetworkConfig>();
-        _syncConfig = _api.Config<ISyncConfig>();
+        _nodeKey = nodeKey;
+        _cryptoRandom = cryptoRandom;
+        _logger = logManager.GetClassLogger();
+        _networkConfig = networkConfig;
+        _syncConfig = syncConfig;
     }
 
     public async Task Execute(CancellationToken cancellationToken)
@@ -305,8 +320,6 @@ public class InitializeNetwork : IStep
     {
         if (_api.NodeStatsManager is null) throw new StepDependencyException(nameof(_api.NodeStatsManager));
         if (_api.Timestamper is null) throw new StepDependencyException(nameof(_api.Timestamper));
-        if (_api.NodeKey is null) throw new StepDependencyException(nameof(_api.NodeKey));
-        if (_api.CryptoRandom is null) throw new StepDependencyException(nameof(_api.CryptoRandom));
         if (_api.EthereumEcdsa is null) throw new StepDependencyException(nameof(_api.EthereumEcdsa));
 
         if (!_api.Config<IInitConfig>().DiscoveryEnabled)
@@ -317,7 +330,7 @@ public class InitializeNetwork : IStep
 
         IDiscoveryConfig discoveryConfig = _api.Config<IDiscoveryConfig>();
 
-        SameKeyGenerator privateKeyProvider = new(_api.NodeKey.Unprotect());
+        SameKeyGenerator privateKeyProvider = new(_nodeKey.Unprotect());
         NodeIdResolver nodeIdResolver = new(_api.EthereumEcdsa);
 
         NodeRecord selfNodeRecord = PrepareNodeRecord(privateKeyProvider);
@@ -372,14 +385,14 @@ public class InitializeNetwork : IStep
             discoveryManager,
             nodeTable,
             _api.MessageSerializationService,
-            _api.CryptoRandom,
+            _cryptoRandom,
             discoveryStorage,
             _networkConfig,
             discoveryConfig,
             _api.Timestamper,
             _api.LogManager);
 
-        _api.DiscoveryApp.Initialize(_api.NodeKey.PublicKey);
+        _api.DiscoveryApp.Initialize(_nodeKey.PublicKey);
     }
 
     private NodeRecord PrepareNodeRecord(SameKeyGenerator privateKeyProvider)
@@ -389,7 +402,7 @@ public class InitializeNetwork : IStep
         selfNodeRecord.SetEntry(new IpEntry(_ipResolver!.ExternalIp));
         selfNodeRecord.SetEntry(new TcpEntry(_networkConfig.P2PPort));
         selfNodeRecord.SetEntry(new UdpEntry(_networkConfig.DiscoveryPort));
-        selfNodeRecord.SetEntry(new Secp256K1Entry(_api.NodeKey!.CompressedPublicKey));
+        selfNodeRecord.SetEntry(new Secp256K1Entry(_nodeKey!.CompressedPublicKey));
         selfNodeRecord.EnrSequence = 1;
         NodeRecordSigner enrSigner = new(_api.EthereumEcdsa, privateKeyProvider.Generate());
         enrSigner.Sign(selfNodeRecord);
@@ -437,7 +450,6 @@ public class InitializeNetwork : IStep
         if (_api.SyncPeerPool is null) throw new StepDependencyException(nameof(_api.SyncPeerPool));
         if (_api.Synchronizer is null) throw new StepDependencyException(nameof(_api.Synchronizer));
         if (_api.Enode is null) throw new StepDependencyException(nameof(_api.Enode));
-        if (_api.NodeKey is null) throw new StepDependencyException(nameof(_api.NodeKey));
         if (_api.MainBlockProcessor is null) throw new StepDependencyException(nameof(_api.MainBlockProcessor));
         if (_api.NodeStatsManager is null) throw new StepDependencyException(nameof(_api.NodeStatsManager));
         if (_api.KeyStore is null) throw new StepDependencyException(nameof(_api.KeyStore));
@@ -450,8 +462,8 @@ public class InitializeNetwork : IStep
         if (_api.DiscoveryApp is null) throw new StepDependencyException(nameof(_api.DiscoveryApp));
 
         /* rlpx */
-        EciesCipher eciesCipher = new(_api.CryptoRandom);
-        Eip8MessagePad eip8Pad = new(_api.CryptoRandom);
+        EciesCipher eciesCipher = new(_cryptoRandom);
+        Eip8MessagePad eip8Pad = new(_cryptoRandom);
         _api.MessageSerializationService.Register(new AuthEip8MessageSerializer(eip8Pad));
         _api.MessageSerializationService.Register(new AckEip8MessageSerializer(eip8Pad));
         _api.MessageSerializationService.Register(Assembly.GetAssembly(typeof(HelloMessageSerializer))!);
@@ -462,9 +474,9 @@ public class InitializeNetwork : IStep
         HandshakeService encryptionHandshakeServiceA = new(
             _api.MessageSerializationService,
             eciesCipher,
-            _api.CryptoRandom,
+            _cryptoRandom,
             _api.EthereumEcdsa,
-            _api.NodeKey.Unprotect(),
+            _nodeKey.Unprotect(),
             _api.LogManager);
 
         IDiscoveryConfig discoveryConfig = _api.Config<IDiscoveryConfig>();
@@ -477,7 +489,7 @@ public class InitializeNetwork : IStep
         _api.SessionMonitor = new SessionMonitor(_networkConfig, _api.LogManager);
         _api.RlpxPeer = new RlpxHost(
             _api.MessageSerializationService,
-            _api.NodeKey.PublicKey,
+            _nodeKey.PublicKey,
             _networkConfig.ProcessingThreadCount,
             _networkConfig.P2PPort,
             _networkConfig.LocalIp,

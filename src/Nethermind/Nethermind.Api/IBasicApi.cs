@@ -34,7 +34,6 @@ namespace Nethermind.Api
         IRocksDbFactory? RocksDbFactory { get; set; }
         IMemDbFactory? MemDbFactory { get; set; }
         IEthereumEcdsa? EthereumEcdsa { get; set; }
-        ProtectedPrivateKey? OriginalSignerKey { get; }
         string SealEngineType { get; }
         ISyncModeSelector SyncModeSelector { get; set; }
         IBetterPeerStrategy? BetterPeerStrategy { get; set; }

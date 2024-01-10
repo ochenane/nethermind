@@ -29,6 +29,7 @@ using Nethermind.Init.Steps;
 using Nethermind.Logging;
 using Nethermind.Specs.ChainSpecStyle;
 using Nethermind.TxPool;
+using Nethermind.Wallet;
 
 namespace Nethermind.Consensus.AuRa.InitializationSteps;
 
@@ -330,7 +331,7 @@ public class StartBlockProducerAuRa : Module
                         signer),
                     new EciesCipher(_api.CryptoRandom),
                     signer,
-                    _api.NodeKey,
+                    _api.BaseContainer.ResolveKeyed<ProtectedPrivateKey>(PrivateKeyName.NodeKey),
                     _api.CryptoRandom,
                     _api.LogManager);
 
