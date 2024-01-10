@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using Autofac;
+using Nethermind.Config;
 using Nethermind.Core.Timers;
-using Nethermind.Evm.Tracing.GethStyle.JavaScript;
 using Nethermind.Logging;
 using Nethermind.Network;
 using Nethermind.Network.Config;
@@ -27,5 +27,10 @@ public class NetworkModule : Module
             .AsSelf()
             .As<IIPResolver>()
             .SingleInstance();
+
+        builder.RegisterType<EnodeContainer>()
+            .SingleInstance();
+
+        builder.Register<EnodeContainer, IEnode>(container => container.Enode);
     }
 }

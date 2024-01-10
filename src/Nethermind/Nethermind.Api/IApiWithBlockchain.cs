@@ -37,7 +37,7 @@ namespace Nethermind.Api
         IBlockProcessor? MainBlockProcessor { get; set; }
         IBlockProducer? BlockProducer { get; set; }
         IBlockValidator? BlockValidator { get; set; }
-        IEnode? Enode { get; set; }
+        IEnode? Enode { get; }
         IFilterStore? FilterStore { get; set; }
         IFilterManager? FilterManager { get; set; }
         IUnclesValidator? UnclesValidator { get; set; }

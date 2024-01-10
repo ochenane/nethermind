@@ -21,19 +21,19 @@ namespace Nethermind.Init.Steps;
 [RunnerStepDependencies(typeof(ResolveIps))]
 public class SetupKeyStore : IStep
 {
-    private readonly IApiWithNetwork _api;
     private readonly ProtectedPrivateKey _nodeKey;
     private readonly ChainSpec _chainSpec;
     private readonly INetworkConfig _networkConfig;
     private readonly IDiscoveryConfig _discoveryConfig;
+    private readonly EnodeContainer _enodeContainer;
     private readonly ILogManager _logManager;
 
     public SetupKeyStore(
-        INethermindApi api,
         [KeyFilter(PrivateKeyName.NodeKey)] ProtectedPrivateKey nodeKey,
         ChainSpec chainSpec,
         INetworkConfig networkConfig,
         IDiscoveryConfig discoveryConfig,
+        EnodeContainer enodeContainer,
         ILogManager logManager
     )
     {
@@ -42,7 +42,7 @@ public class SetupKeyStore : IStep
         _networkConfig = networkConfig;
         _discoveryConfig = discoveryConfig;
         _logManager = logManager;
-        _api = api;
+        _enodeContainer = enodeContainer;
     }
 
     public Task Execute(CancellationToken cancellationToken)
@@ -57,8 +57,7 @@ public class SetupKeyStore : IStep
     private void SetEnode()
     {
         IPAddress ipAddress = _networkConfig.ExternalIp is not null ? IPAddress.Parse(_networkConfig.ExternalIp) : IPAddress.Loopback;
-        IEnode enode = _api.Enode = new Enode(_nodeKey!.PublicKey, ipAddress, _networkConfig.P2PPort);
-
+        IEnode enode = _enodeContainer.Enode = new Enode(_nodeKey!.PublicKey, ipAddress, _networkConfig.P2PPort);
         _logManager.SetGlobalVariable("enode", enode.ToString());
     }
 

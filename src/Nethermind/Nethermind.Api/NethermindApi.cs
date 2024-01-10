@@ -114,7 +114,7 @@ namespace Nethermind.Api
         public IDiscoveryApp? DiscoveryApp { get; set; }
         public ISigner? EngineSigner { get; set; }
         public ISignerStore? EngineSignerStore { get; set; }
-        public IEnode? Enode { get; set; }
+        public IEnode? Enode => BaseContainer.Resolve<IEnode>();
         public IEthereumEcdsa? EthereumEcdsa { get; set; }
         public IFileSystem FileSystem => BaseContainer.Resolve<IFileSystem>();
         public IFilterStore? FilterStore { get; set; }

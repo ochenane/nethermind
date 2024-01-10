@@ -5,10 +5,8 @@ using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
 using Autofac;
-using Nethermind.Abi;
 using Nethermind.Api.Extensions;
 using Nethermind.Config;
-using Nethermind.Consensus;
 using Nethermind.Core;
 using Nethermind.Core.Specs;
 using Nethermind.Core.Timers;
@@ -18,10 +16,8 @@ using Nethermind.KeyStore;
 using Nethermind.Logging;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs.ChainSpecStyle;
-using Nethermind.Stats;
 using Nethermind.Synchronization;
 using Nethermind.Synchronization.ParallelSync;
-using Nethermind.Wallet;
 
 namespace Nethermind.Api
 {
@@ -29,7 +25,6 @@ namespace Nethermind.Api
     {
         DisposableStack DisposeStack { get; }
 
-        IAbiEncoder AbiEncoder { get; }
         ChainSpec ChainSpec { get; }
         IConfigProvider ConfigProvider { get; }
         ICryptoRandom CryptoRandom { get; }

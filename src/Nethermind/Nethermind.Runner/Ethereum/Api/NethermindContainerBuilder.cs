@@ -30,7 +30,8 @@ namespace Nethermind.Runner.Ethereum.Api
         private readonly ILogger _logger;
         private readonly IInitConfig _initConfig;
 
-        public NethermindContainerBuilder(IConfigProvider configProvider, IProcessExitSource processExitSource, ILogManager logManager)
+        public NethermindContainerBuilder(IConfigProvider configProvider, IProcessExitSource processExitSource,
+            ILogManager logManager)
         {
             _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
             _processExitSource = processExitSource ?? throw new ArgumentNullException(nameof(processExitSource));
@@ -85,7 +86,8 @@ namespace Nethermind.Runner.Ethereum.Api
 
         private ChainSpec LoadChainSpec(IJsonSerializer ethereumJsonSerializer)
         {
-            bool hiveEnabled = Environment.GetEnvironmentVariable("NETHERMIND_HIVE_ENABLED")?.ToLowerInvariant() == "true";
+            bool hiveEnabled = Environment.GetEnvironmentVariable("NETHERMIND_HIVE_ENABLED")?.ToLowerInvariant() ==
+                               "true";
             bool hiveChainSpecExists = File.Exists(_initConfig.HiveChainSpecPath);
 
             string chainSpecFile;
@@ -101,7 +103,15 @@ namespace Nethermind.Runner.Ethereum.Api
             IChainSpecLoader loader = new ChainSpecLoader(ethereumJsonSerializer);
             ChainSpec chainSpec = loader.LoadEmbeddedOrFromFile(chainSpecFile, _logger);
             TransactionForRpc.DefaultChainId = chainSpec.ChainId;
+            SetLoggerVariables(chainSpec);
             return chainSpec;
+        }
+
+        private void SetLoggerVariables(ChainSpec chainSpec)
+        {
+            _logManager.SetGlobalVariable("chain", chainSpec.Name);
+            _logManager.SetGlobalVariable("chainId", chainSpec.ChainId);
+            _logManager.SetGlobalVariable("engine", chainSpec.SealEngineType);
         }
     }
 }

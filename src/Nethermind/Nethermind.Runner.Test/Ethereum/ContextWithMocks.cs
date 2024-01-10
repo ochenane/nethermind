@@ -66,11 +66,11 @@ namespace Nethermind.Runner.Test.Ethereum
             containerBuilder.RegisterInstance(Substitute.For<IWallet>()).As<IWallet>();
             containerBuilder.RegisterInstance(Substitute.For<IFileSystem>()).As<IFileSystem>();
             containerBuilder.RegisterInstance(Substitute.For<IKeyStore>()).As<IKeyStore>();
+            containerBuilder.RegisterInstance(Substitute.For<IEnode>()).As<IEnode>();
             containerBuilder.RegisterInstance(new ChainSpec());
 
             var api = new NethermindApi(containerBuilder.Build())
             {
-                Enode = Substitute.For<IEnode>(),
                 TxPool = Substitute.For<ITxPool>(),
                 BlockTree = Substitute.For<IBlockTree>(),
                 SyncServer = Substitute.For<ISyncServer>(),

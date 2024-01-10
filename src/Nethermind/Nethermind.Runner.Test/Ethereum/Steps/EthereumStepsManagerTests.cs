@@ -19,11 +19,11 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
     public class EthereumStepsManagerTests
     {
         [Test]
-        public async Task When_no_assemblies_defined()
+        public async Task When_no_steps_defined()
         {
-            IContainer runnerContext = CreateNethermindApi();
+            IContainer runnerContext = new ContainerBuilder().Build();
 
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader();
+            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(runnerContext);
             EthereumStepsManager stepsManager = new EthereumStepsManager(
                 stepsLoader,
                 runnerContext,
