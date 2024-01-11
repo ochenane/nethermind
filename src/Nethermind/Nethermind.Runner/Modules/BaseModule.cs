@@ -97,7 +97,7 @@ public class BaseModule : Module
     /// <summary>
     /// Dynamically resolve IConfig<T>
     /// </summary>
-    private class ConfigRegistrationSource : IRegistrationSource
+    internal class ConfigRegistrationSource : IRegistrationSource
     {
         private readonly IConfigProvider _configProvider;
 
@@ -133,7 +133,7 @@ public class BaseModule : Module
     /// <summary>
     /// Dynamically resolve ILogger<T>
     /// </summary>
-    private class LoggerRegistrationSource : ImplicitRegistrationSource
+    public class LoggerRegistrationSource : ImplicitRegistrationSource
     {
         private readonly ILogManager _logManager;
 
