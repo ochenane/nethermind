@@ -19,12 +19,4 @@ namespace Nethermind.Logging
         bool IsTrace { get; }
         bool IsError { get; }
     }
-
-    /// <summary>
-    /// Same as ILogger, but with a type for its class. Used for dependency injection.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public interface ILogger<T> : ILogger
-    {
-    }
 }

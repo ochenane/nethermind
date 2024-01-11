@@ -92,7 +92,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         private static ContainerBuilder CreateBaseContainerBuilder()
         {
             var builder = new ContainerBuilder();
-            builder.RegisterSource(new BaseModule.LoggerRegistrationSource(LimboLogs.Instance));
+            BaseModule.LoggerMiddleware.Configure(builder, LimboLogs.Instance);
             builder.RegisterModule(new RunnerModule());
             builder.RegisterInstance(LimboLogs.Instance).AsImplementedInterfaces();
             return builder;

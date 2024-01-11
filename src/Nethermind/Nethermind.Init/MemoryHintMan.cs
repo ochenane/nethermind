@@ -22,7 +22,7 @@ namespace Nethermind.Init
     /// </summary>
     public class MemoryHintMan
     {
-        private readonly ILogger<MemoryHintMan> _logger;
+        private readonly ILogger _logger;
         private readonly MallocHelper _mallocHelper;
         private readonly IInitConfig _initConfig;
         private readonly IDbConfig _dbConfig;
@@ -31,7 +31,7 @@ namespace Nethermind.Init
         private readonly ITxPoolConfig _txPoolConfig;
 
         public MemoryHintMan(
-            ILogger<MemoryHintMan> logger,
+            ILogger logger,
             IInitConfig initConfig,
             IDbConfig dbConfig,
             INetworkConfig networkConfig,

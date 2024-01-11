@@ -44,10 +44,5 @@ namespace Nethermind.Logging
         {
             return LimboTraceLogger.Instance;
         }
-
-        public ILogger<T> TypedLogger<T>()
-        {
-            return new TypedLoggerWrapper<T>(GetClassLogger<T>());
-        }
     }
 }

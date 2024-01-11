@@ -2,14 +2,9 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Autofac;
 using Nethermind.Api;
-using Nethermind.Api.Extensions;
 using Nethermind.Core;
 using Nethermind.Init.Steps;
 using Nethermind.Logging;
@@ -22,7 +17,7 @@ namespace Nethermind.Runner.Ethereum
         private readonly ILogger _logger;
         private readonly EthereumStepsManager _stepManager;
 
-        public EthereumRunner(INethermindApi api, EthereumStepsManager stepsManager, ILogger<EthereumRunner> logger)
+        public EthereumRunner(INethermindApi api, EthereumStepsManager stepsManager, ILogger logger)
         {
             _api = api;
             _stepManager = stepsManager;

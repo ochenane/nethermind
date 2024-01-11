@@ -40,7 +40,7 @@ namespace Nethermind.Runner.Test
             _txPoolConfig = new TxPoolConfig();
             _networkConfig = new NetworkConfig();
             _mallocHelper = Substitute.For<MallocHelper>();
-            _memoryHintMan = new MemoryHintMan(LimboLogs.Instance.TypedLogger<MemoryHintMan>(), _initConfig, _dbConfig, _networkConfig, _syncConfig, _txPoolConfig, _mallocHelper);
+            _memoryHintMan = new MemoryHintMan(LimboLogs.Instance.GetClassLogger(), _initConfig, _dbConfig, _networkConfig, _syncConfig, _txPoolConfig, _mallocHelper);
         }
 
         private void SetMemoryAllowances(uint cpuCount)

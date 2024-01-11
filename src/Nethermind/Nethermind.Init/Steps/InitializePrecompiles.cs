@@ -13,11 +13,11 @@ namespace Nethermind.Init.Steps;
 
 public class InitializePrecompiles : IStep
 {
-    private ILogger<InitializePrecompiles> _logger;
+    private ILogger _logger;
     private IInitConfig _initConfig;
     private ISpecProvider _specProvider;
 
-    public InitializePrecompiles(ISpecProvider specProvider, IInitConfig initConfig, ILogger<InitializePrecompiles> logger)
+    public InitializePrecompiles(ISpecProvider specProvider, IInitConfig initConfig, ILogger logger)
     {
         _specProvider = specProvider;
         _initConfig = initConfig;

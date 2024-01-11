@@ -15,7 +15,7 @@ public class LogHardwareInfo : IStep
 
     public bool MustInitialize => false;
 
-    public LogHardwareInfo(ILogger<LogHardwareInfo> logger)
+    public LogHardwareInfo(ILogger logger)
     {
         _logger = logger;
     }

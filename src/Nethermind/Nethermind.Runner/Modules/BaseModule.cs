@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
+using System.Reflection;
 using Antlr4.Runtime.Misc;
 using Autofac;
 using Autofac.Core;
@@ -28,6 +29,8 @@ using Nethermind.Network.Config;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs.ChainSpecStyle;
 using Nethermind.TxPool;
+using Org.BouncyCastle.Crypto.Parameters;
+using Module = Autofac.Module;
 
 namespace Nethermind.Runner.Modules;
 
@@ -62,7 +65,6 @@ public class BaseModule : Module
 
         builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource());
         builder.RegisterSource(new ConfigRegistrationSource(_configProvider));
-        builder.RegisterSource(new LoggerRegistrationSource(_logManager));
         builder.RegisterInstance(_configProvider);
         builder.RegisterInstance(_processExitSource);
         builder.RegisterInstance(_chainSpec);
@@ -85,6 +87,8 @@ public class BaseModule : Module
 
         builder.RegisterInstance(new FileSystem())
             .As<IFileSystem>();
+
+        LoggerMiddleware.Configure(builder, _logManager);
     }
 
     private void SetLoggerVariables(ChainSpec chainSpec, ILogManager logManager)
@@ -131,20 +135,46 @@ public class BaseModule : Module
     }
 
     /// <summary>
-    /// Dynamically resolve ILogger<T>
+    /// For automatically resolving ILogger
     /// </summary>
-    public class LoggerRegistrationSource : ImplicitRegistrationSource
+    public class LoggerMiddleware : IResolveMiddleware
     {
         private readonly ILogManager _logManager;
 
-        public LoggerRegistrationSource(ILogManager logManager) : base(typeof(ILogger<>))
+        public LoggerMiddleware(ILogManager logManager)
         {
             _logManager = logManager;
         }
 
-        protected override object ResolveInstance<T>(IComponentContext context, ResolveRequest request)
+        public PipelinePhase Phase => PipelinePhase.ParameterSelection;
+
+        public void Execute(ResolveRequestContext context, Action<ResolveRequestContext> next)
         {
-            return new TypedLoggerWrapper<T>(_logManager.GetClassLogger<T>());
+            // Add our parameters.
+            context.ChangeParameters(context.Parameters.Union(
+                new[]
+                {
+                    new ResolvedParameter(
+                        (p, i) => p.ParameterType == typeof(ILogger),
+                        (p, i) => _logManager.GetClassLogger(p.Member.DeclaringType)
+                    ),
+                }));
+
+            // Continue the resolve.
+            next(context);
+        }
+
+        public static void Configure(ContainerBuilder builder, ILogManager logManager)
+        {
+            LoggerMiddleware loggerMiddleware = new LoggerMiddleware(logManager);
+            builder.ComponentRegistryBuilder.Registered += (senter, args) =>
+            {
+                args.ComponentRegistration.PipelineBuilding += (sender2, pipeline) =>
+                {
+                    pipeline.Use(loggerMiddleware);
+                };
+            };
         }
     }
+
 }

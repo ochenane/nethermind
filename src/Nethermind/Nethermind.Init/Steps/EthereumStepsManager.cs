@@ -18,7 +18,7 @@ namespace Nethermind.Init.Steps
 {
     public class EthereumStepsManager
     {
-        private readonly ILogger<EthereumStepsManager> _logger;
+        private readonly ILogger _logger;
 
         private readonly AutoResetEvent _autoResetEvent = new AutoResetEvent(true);
         private readonly ILifetimeScope _container;
@@ -28,11 +28,9 @@ namespace Nethermind.Init.Steps
         public EthereumStepsManager(
             IEthereumStepsLoader loader,
             ILifetimeScope container,
-            ILogger<EthereumStepsManager> logger)
+            ILogger logger)
         {
-            ArgumentNullException.ThrowIfNull(loader);
-
-            _container = container ?? throw new ArgumentNullException(nameof(container));
+            _container = container;
             _logger = logger;
 
             _allSteps = loader.LoadSteps().ToList();

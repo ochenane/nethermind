@@ -27,7 +27,7 @@ public class BaseModuleTests
         ILogManager logManager = Substitute.For<ILogManager>();
 
         configProvider.GetConfig(typeof(IInitConfig)).Returns(new InitConfig());
-        logManager.GetClassLogger<TestClass>().Returns(LimboLogs.Instance.GetClassLogger<TestClass>());
+        logManager.GetClassLogger(typeof(TestClass)).Returns(LimboLogs.Instance.GetClassLogger<TestClass>());
 
         ContainerBuilder builder = new ContainerBuilder();
         builder.RegisterModule(new BaseModule(
@@ -50,7 +50,7 @@ public class BaseModuleTests
         public IInitConfig InitConfig;
         public ILogger Logger;
 
-        public TestClass(IInitConfig initConfig, ILogger<TestClass> logger)
+        public TestClass(IInitConfig initConfig, ILogger logger)
         {
             InitConfig = initConfig;
             Logger = logger;
