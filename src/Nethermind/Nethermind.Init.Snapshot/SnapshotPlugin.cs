@@ -9,6 +9,7 @@ namespace Nethermind.Init.Snapshot;
 
 public class SnapshotPlugin : Module, INethermindPlugin
 {
+    private readonly ISnapshotConfig _config;
     public string Name => "Snapshot";
 
     public string Author => "Nethermind";
@@ -19,14 +20,13 @@ public class SnapshotPlugin : Module, INethermindPlugin
     public Task InitNetworkProtocol() => Task.CompletedTask;
     public Task InitRpcModules() => Task.CompletedTask;
 
-    public IModule? GetModule(string engineType, IConfigProvider configProvider)
-    {
-        if (configProvider.GetConfig<ISnapshotConfig>() is { Enabled: true, DownloadUrl: not null })
-        {
-            return this;
-        }
+    public bool Enabled => _config is { Enabled: true, DownloadUrl: not null };
 
-        return null;
+    public IModule? Module => this;
+
+    public SnapshotPlugin(ISnapshotConfig config)
+    {
+        _config = config;
     }
 
     protected override void Load(ContainerBuilder builder)

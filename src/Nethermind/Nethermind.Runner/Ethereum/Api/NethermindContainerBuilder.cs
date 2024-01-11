@@ -42,10 +42,10 @@ namespace Nethermind.Runner.Ethereum.Api
             _jsonSerializer = new EthereumJsonSerializer();
         }
 
-        public IContainer Create(params INethermindPlugin[] plugins) =>
-            Create((IEnumerable<INethermindPlugin>)plugins);
+        public IContainer Create(params Type[] plugins) =>
+            Create((IEnumerable<Type>)plugins);
 
-        public IContainer Create(IEnumerable<INethermindPlugin> plugins)
+        public IContainer Create(IEnumerable<Type> plugins)
         {
             ChainSpec chainSpec = LoadChainSpec(_jsonSerializer);
             bool wasCreated = Interlocked.CompareExchange(ref _apiCreated, 1, 0) == 1;
@@ -56,30 +56,51 @@ namespace Nethermind.Runner.Ethereum.Api
 
             string engine = chainSpec.SealEngineType;
 
-            ContainerBuilder containerBuilder = new ContainerBuilder();
-            containerBuilder.RegisterModule(new BaseModule(
+            IModule baseModule = new BaseModule(
                 _configProvider,
                 _processExitSource,
                 chainSpec,
                 _jsonSerializer,
                 _logManager
-            ));
+            );
+
+            ContainerBuilder containerBuilder = new ContainerBuilder();
+            containerBuilder.RegisterModule(baseModule);
+            containerBuilder.RegisterModule(new CoreModule());
             containerBuilder.RegisterModule(new NetworkModule());
             containerBuilder.RegisterModule(new KeyStoreModule());
             containerBuilder.RegisterModule(new StepModule());
             containerBuilder.RegisterModule(new RunnerModule());
+            ApplyPluginModule(plugins, baseModule, containerBuilder, engine);
 
-            foreach (INethermindPlugin nethermindPlugin in plugins)
+            return containerBuilder.Build();
+        }
+
+        private void ApplyPluginModule(IEnumerable<Type> plugins, IModule baseModule, ContainerBuilder containerBuilder,
+            string engine)
+        {
+            ContainerBuilder pluginLoaderBuilder = new ContainerBuilder();
+            pluginLoaderBuilder.RegisterModule(baseModule);
+            foreach (Type plugin in plugins)
             {
+                pluginLoaderBuilder.RegisterType(plugin)
+                    .As<INethermindPlugin>()
+                    .ExternallyOwned();
+            }
+
+            using IContainer pluginLoader = pluginLoaderBuilder.Build();
+
+            foreach (INethermindPlugin nethermindPlugin in pluginLoader.Resolve<IEnumerable<INethermindPlugin>>())
+            {
+                if (!nethermindPlugin.Enabled) continue;
+
                 containerBuilder.RegisterInstance(nethermindPlugin).As<INethermindPlugin>();
-                IModule? pluginModule = nethermindPlugin.GetModule(engine, _configProvider);
+                IModule? pluginModule = nethermindPlugin.Module;
                 if (pluginModule != null)
                 {
                     containerBuilder.RegisterModule(pluginModule);
                 }
             }
-
-            return containerBuilder.Build();
         }
 
         private int _apiCreated;

@@ -14,17 +14,22 @@ public class UPnPPlugin : INethermindPlugin
     public string Name => "UPnP";
     public string Description => "Automatic port forwarding with UPnP";
     public string Author => "Nethermind";
+    public bool Enabled => _networkConfig.EnableUPnP;
 
     // Routers tend to clean mapping, so we need to periodically
     private readonly TimeSpan ExpirationRate = TimeSpan.FromMinutes(10);
     private PeriodicTimer? _timer = null;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-    private INetworkConfig _networkConfig = new NetworkConfig();
+    private readonly INetworkConfig _networkConfig = new NetworkConfig();
     private ILogger _logger = NullLogger.Instance;
+
+    public UPnPPlugin(INetworkConfig networkConfig)
+    {
+        _networkConfig = networkConfig;
+    }
 
     public Task Init(INethermindApi api)
     {
-        _networkConfig = api.Config<INetworkConfig>();
         _logger = api.LogManager.GetClassLogger<UPnPPlugin>();
 
         if (_networkConfig.EnableUPnP)

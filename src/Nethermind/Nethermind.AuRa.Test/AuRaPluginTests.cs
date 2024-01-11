@@ -20,7 +20,7 @@ namespace Nethermind.AuRa.Test
         [Test]
         public void Init_when_not_AuRa_doesnt_trow()
         {
-            AuRaPlugin auRaPlugin = new();
+            AuRaPlugin auRaPlugin = new(new ChainSpec());
             Action init = () => auRaPlugin.Init(new NethermindApi(Substitute.For<IContainer>()));
             init.Should().NotThrow();
         }

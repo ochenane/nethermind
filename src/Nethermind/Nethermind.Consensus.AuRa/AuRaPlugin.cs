@@ -12,6 +12,7 @@ using Nethermind.Consensus.AuRa.InitializationSteps;
 using Nethermind.Consensus.Producers;
 using Nethermind.Consensus.Transactions;
 using Nethermind.Init.Steps;
+using Nethermind.Specs.ChainSpecStyle;
 
 [assembly: InternalsVisibleTo("Nethermind.Merge.AuRa")]
 
@@ -23,14 +24,20 @@ namespace Nethermind.Consensus.AuRa
     public class AuRaPlugin : IConsensusPlugin, ISynchronizationPlugin
     {
         private AuRaNethermindApi? _nethermindApi;
+        private readonly ChainSpec _chainSpec;
         public string Name => SealEngineType;
 
         public string Description => $"{SealEngineType} Consensus Engine";
 
         public string Author => "Nethermind";
+        public bool Enabled => _chainSpec.SealEngineType == SealEngineType;
 
         public string SealEngineType => Core.SealEngineType.AuRa;
 
+        public AuRaPlugin(ChainSpec chainSpec)
+        {
+            _chainSpec = chainSpec;
+        }
 
         public ValueTask DisposeAsync()
         {
@@ -77,11 +84,7 @@ namespace Nethermind.Consensus.AuRa
 
         public IBlockProductionTrigger? DefaultBlockProductionTrigger { get; private set; }
 
-        public IModule? GetModule(string engineType, IConfigProvider configProvider)
-        {
-            if (engineType != SealEngineType) return null;
-            return new AuraModule();
-        }
+        public IModule? Module => new AuraModule();
 
         public class AuraModule : Module
         {

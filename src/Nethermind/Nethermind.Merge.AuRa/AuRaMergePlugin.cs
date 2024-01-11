@@ -15,6 +15,7 @@ using Nethermind.Core;
 using Nethermind.Init.Steps;
 using Nethermind.Merge.Plugin;
 using Nethermind.Merge.Plugin.BlockProduction;
+using Nethermind.Specs.ChainSpecStyle;
 
 namespace Nethermind.Merge.AuRa
 {
@@ -28,7 +29,13 @@ namespace Nethermind.Merge.AuRa
 
         public override string Name => "AuRaMerge";
         public override string Description => "AuRa Merge plugin for ETH1-ETH2";
-        protected override bool MergeEnabled => ShouldRun(_api.SealEngineType, _api.ConfigProvider.GetConfig<IMergeConfig>());
+
+        protected override bool MergeEnabled => _mergeConfig.Enabled && _chainSpec.SealEngineType == SealEngineType.AuRa;
+
+        public AuRaMergePlugin(ChainSpec chainSpec, IMergeConfig mergeConfig)
+            : base(chainSpec, mergeConfig)
+        {
+        }
 
         public override async Task Init(INethermindApi nethermindApi)
         {
@@ -76,21 +83,7 @@ namespace Nethermind.Merge.AuRa
                 _blocksConfig,
                 _api.LogManager);
 
-        public override IModule? GetModule(string engineType, IConfigProvider configProvider)
-        {
-            var mergeConfig = configProvider.GetConfig<IMergeConfig>();
-            if (ShouldRun(engineType, mergeConfig))
-            {
-                return new AuraMergeModule();
-            }
-
-            return null;
-        }
-
-        private static bool ShouldRun(string engineType, IMergeConfig mergeConfig)
-        {
-            return mergeConfig.Enabled && engineType == SealEngineType.AuRa;
-        }
+        public override IModule? Module => new AuraMergeModule();
 
         private class AuraMergeModule : Module
         {

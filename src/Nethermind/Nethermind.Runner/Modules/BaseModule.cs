@@ -74,14 +74,6 @@ public class BaseModule : Module
             .As<ICryptoRandom>()
             .SingleInstance();
 
-        builder.RegisterType<FollowOtherMiners>()
-            .As<IGasLimitCalculator>()
-            .SingleInstance();
-
-        builder.RegisterType<NethermindApi>()
-            .As<INethermindApi>()
-            .SingleInstance();
-
         builder.RegisterInstance(TimerFactory.Default)
             .As<ITimerFactory>();
 

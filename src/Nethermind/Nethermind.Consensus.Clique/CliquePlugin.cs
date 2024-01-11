@@ -19,6 +19,7 @@ using Nethermind.Consensus.Withdrawals;
 using Nethermind.Core.Attributes;
 using Nethermind.Db;
 using Nethermind.JsonRpc.Modules;
+using Nethermind.Specs.ChainSpecStyle;
 using Nethermind.State;
 
 namespace Nethermind.Consensus.Clique
@@ -30,6 +31,12 @@ namespace Nethermind.Consensus.Clique
         public string Description => "Clique Consensus Engine";
 
         public string Author => "Nethermind";
+        public bool Enabled => _chainSpec.SealEngineType == SealEngineType;
+
+        public CliquePlugin(ChainSpec chainSpec)
+        {
+            _chainSpec = chainSpec;
+        }
 
         public Task Init(INethermindApi nethermindApi)
         {
@@ -192,11 +199,9 @@ namespace Nethermind.Consensus.Clique
         private ICliqueConfig? _cliqueConfig;
 
         private IBlocksConfig? _blocksConfig;
-        public IModule? GetModule(string engineType, IConfigProvider configProvider)
-        {
-            if (engineType != SealEngineType) return null;
-            return new CliqueModule();
-        }
+        private readonly ChainSpec _chainSpec;
+
+        public IModule? Module => new CliqueModule();
 
         private class CliqueModule : Module
         {

@@ -176,24 +176,7 @@ public static class Program
             if (_logger.IsInfo) _logger.Info($"RocksDb Version: {DbOnTheRocks.GetRocksDbVersion()}");
 
             NethermindContainerBuilder nethermindContainerBuilder = new(configProvider, _processExitSource, logManager);
-
-            IList<INethermindPlugin> plugins = new List<INethermindPlugin>();
-            foreach (Type pluginType in pluginLoader.PluginTypes)
-            {
-                try
-                {
-                    if (Activator.CreateInstance(pluginType) is INethermindPlugin plugin)
-                    {
-                        plugins.Add(plugin);
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsError) _logger.Error($"Failed to create plugin {pluginType.FullName}", e);
-                }
-            }
-
-            IContainer container = nethermindContainerBuilder.Create(plugins);
+            IContainer container = nethermindContainerBuilder.Create(pluginLoader.PluginTypes);
             EthereumRunner ethereumRunner = null;
             _appClosed.Reset();
             try

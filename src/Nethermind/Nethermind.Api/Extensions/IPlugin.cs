@@ -18,6 +18,10 @@ namespace Nethermind.Api.Extensions
 
         string Author { get; }
 
+        bool Enabled { get; }
+
+        IModule? Module => null;
+
         Task Init(INethermindApi nethermindApi);
 
         Task InitNetworkProtocol();

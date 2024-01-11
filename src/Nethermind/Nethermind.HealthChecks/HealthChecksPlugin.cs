@@ -52,8 +52,14 @@ namespace Nethermind.HealthChecks
         public string Description => "Endpoints that takes care of node`s health";
 
         public string Author => "Nethermind";
+        public bool Enabled => _healthChecksConfig.Enabled;
 
         public bool MustInitialize => true;
+
+        public HealthChecksPlugin(IHealthChecksConfig healthChecksConfig)
+        {
+            _healthChecksConfig = healthChecksConfig;
+        }
 
         public FreeDiskSpaceChecker FreeDiskSpaceChecker => LazyInitializer.EnsureInitialized(ref _freeDiskSpaceChecker,
             () => new FreeDiskSpaceChecker(
@@ -67,7 +73,6 @@ namespace Nethermind.HealthChecks
         {
             _api = api;
             _ipResolver = api.BaseContainer.Resolve<IPResolver>();
-            _healthChecksConfig = _api.Config<IHealthChecksConfig>();
             _jsonRpcConfig = _api.Config<IJsonRpcConfig>();
             _initConfig = _api.Config<IInitConfig>();
             _logger = api.LogManager.GetClassLogger();

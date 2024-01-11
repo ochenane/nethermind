@@ -25,11 +25,16 @@ public class EthStatsPlugin : INethermindPlugin
     private INethermindApi _api = null!;
     private ILogger _logger = null!;
 
-    private bool _isOn;
-
     public string Name => "EthStats";
     public string Description => "Ethereum Statistics";
     public string Author => "Nethermind";
+
+    public bool Enabled => _ethStatsConfig.Enabled;
+
+    public EthStatsPlugin(IEthStatsConfig ethStatsConfig)
+    {
+        _ethStatsConfig = ethStatsConfig;
+    }
 
     public ValueTask DisposeAsync()
     {
@@ -41,15 +46,12 @@ public class EthStatsPlugin : INethermindPlugin
     {
         _api = nethermindApi;
         var (getFromAPi, _) = _api.ForInit;
-        _ethStatsConfig = getFromAPi.Config<IEthStatsConfig>();
 
         IInitConfig initConfig = getFromAPi.Config<IInitConfig>();
-        _isOn = _ethStatsConfig.Enabled;
         _logger = getFromAPi.LogManager.GetClassLogger();
 
-        if (!_isOn)
+        if (!Enabled)
         {
-
             if (!initConfig.WebSocketsEnabled)
             {
                 _logger.Warn($"{nameof(EthStatsPlugin)} disabled due to {nameof(initConfig.WebSocketsEnabled)} set to false");
@@ -69,7 +71,7 @@ public class EthStatsPlugin : INethermindPlugin
         INetworkConfig networkConfig = _api.Config<INetworkConfig>();
         IInitConfig initConfig = _api.Config<IInitConfig>();
 
-        if (_isOn)
+        if (Enabled)
         {
             string instanceId = $"{_ethStatsConfig.Name}-{Keccak.Compute(getFromAPi.Enode!.Info)}";
             if (_logger.IsInfo)

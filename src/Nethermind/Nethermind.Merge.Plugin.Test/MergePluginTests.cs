@@ -61,9 +61,9 @@ public class MergePluginTests
             Epoch = CliqueConfig.Default.Epoch,
             Period = CliqueConfig.Default.BlockPeriod
         };
-        _plugin = new MergePlugin();
+        _plugin = new MergePlugin(_context.ChainSpec, _mergeConfig);
 
-        _consensusPlugin = new();
+        _consensusPlugin = new(_context.ChainSpec);
     }
 
     [TearDown]

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
 using Autofac.Core;
 using Nethermind.Api;
 using Nethermind.Api.Extensions;
@@ -29,6 +30,7 @@ using Nethermind.Merge.Plugin.GC;
 using Nethermind.Merge.Plugin.Handlers;
 using Nethermind.Merge.Plugin.InvalidChainTracker;
 using Nethermind.Merge.Plugin.Synchronization;
+using Nethermind.Specs.ChainSpecStyle;
 using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Trie.Pruning;
 using Nethermind.TxPool;
@@ -52,16 +54,25 @@ public partial class MergePlugin : IConsensusWrapperPlugin, ISynchronizationPlug
 
     private ManualBlockFinalizationManager _blockFinalizationManager = null!;
     private IMergeBlockProductionPolicy? _mergeBlockProductionPolicy;
+    protected readonly ChainSpec _chainSpec;
 
     public virtual string Name => "Merge";
     public virtual string Description => "Merge plugin for ETH1-ETH2";
     public string Author => "Nethermind";
 
     protected virtual bool MergeEnabled => _mergeConfig.Enabled &&
-                                           _api.ChainSpec.SealEngineType is SealEngineType.BeaconChain or SealEngineType.Clique or SealEngineType.Ethash;
+                                           _chainSpec.SealEngineType is SealEngineType.BeaconChain or SealEngineType.Clique or SealEngineType.Ethash;
+
+    // this looks redundant but Enabled actually comes from IConsensusWrapperPlugin
+    // while MergeEnabled comes from merge config
+    public virtual bool Enabled => MergeEnabled;
 
     // Don't remove default constructor. It is used by reflection when we're loading plugins
-    public MergePlugin() { }
+    public MergePlugin(ChainSpec chainSpec, IMergeConfig mergeConfig)
+    {
+        _chainSpec = chainSpec;
+        _mergeConfig = mergeConfig;
+    }
 
     public virtual Task Init(INethermindApi nethermindApi)
     {
@@ -110,7 +121,7 @@ public partial class MergePlugin : IConsensusWrapperPlugin, ISynchronizationPlug
             }
 
             _api.RewardCalculatorSource = new MergeRewardCalculatorSource(
-               _api.RewardCalculatorSource ?? NoBlockRewards.Instance, _poSSwitcher);
+                _api.RewardCalculatorSource ?? NoBlockRewards.Instance, _poSSwitcher);
             _api.SealValidator = new InvalidHeaderSealInterceptor(
                 new MergeSealValidator(_poSSwitcher, _api.SealValidator),
                 _invalidChainTracker,
@@ -140,8 +151,8 @@ public partial class MergePlugin : IConsensusWrapperPlugin, ISynchronizationPlug
             else
             {
                 throw new InvalidConfigurationException($"Configuration mismatch at {nameof(IBlocksConfig.SecondsPerSlot)} " +
-                                                            $"with conflicting values {blocksConfig.SecondsPerSlot} and {mergeConfig.SecondsPerSlot}",
-                        ExitCodes.ConflictingConfigurations);
+                                                        $"with conflicting values {blocksConfig.SecondsPerSlot} and {mergeConfig.SecondsPerSlot}",
+                    ExitCodes.ConflictingConfigurations);
             }
         }
     }
@@ -225,12 +236,12 @@ public partial class MergePlugin : IConsensusWrapperPlugin, ISynchronizationPlug
             if (_api.HeaderValidator is null) throw new ArgumentException(nameof(_api.HeaderValidator));
 
             MergeHeaderValidator headerValidator = new(
-                    _poSSwitcher,
-                    _api.HeaderValidator,
-                    _api.BlockTree,
-                    _api.SpecProvider,
-                    _api.SealValidator,
-                    _api.LogManager);
+                _poSSwitcher,
+                _api.HeaderValidator,
+                _api.BlockTree,
+                _api.SpecProvider,
+                _api.SealValidator,
+                _api.LogManager);
 
             _api.HeaderValidator = new InvalidHeaderInterceptor(
                 headerValidator,
@@ -385,12 +396,12 @@ public partial class MergePlugin : IConsensusWrapperPlugin, ISynchronizationPlug
             _beaconPivot = new BeaconPivot(_syncConfig, _api.DbProvider.MetadataDb, _api.BlockTree, _api.LogManager);
 
             MergeHeaderValidator headerValidator = new(
-                    _poSSwitcher,
-                    _api.HeaderValidator,
-                    _api.BlockTree,
-                    _api.SpecProvider,
-                    _api.SealValidator,
-                    _api.LogManager);
+                _poSSwitcher,
+                _api.HeaderValidator,
+                _api.BlockTree,
+                _api.SpecProvider,
+                _api.SealValidator,
+                _api.LogManager);
 
             _api.HeaderValidator = new InvalidHeaderInterceptor(
                 headerValidator,
@@ -464,8 +475,5 @@ public partial class MergePlugin : IConsensusWrapperPlugin, ISynchronizationPlug
 
     public bool MustInitialize { get => true; }
 
-    public virtual IModule? GetModule(string engineType, IConfigProvider configProvider)
-    {
-        return null;
-    }
+    public virtual IModule? Module => null;
 }

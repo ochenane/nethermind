@@ -51,10 +51,9 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
     private IPeerRefresher? _peerRefresher;
     private IBeaconPivot? _beaconPivot;
     private BeaconSync? _beaconSync;
+    private readonly ChainSpec _chainSpec;
 
-    private bool ShouldRunSteps(INethermindApi api) => ShouldRunSteps(api.SealEngineType);
-
-    private bool ShouldRunSteps(string engineType) => engineType == SealEngineType;
+    public bool Enabled => _chainSpec.SealEngineType == SealEngineType;
 
     #region IConsensusPlugin
 
@@ -77,9 +76,14 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
 
     #endregion
 
+    public OptimismPlugin(ChainSpec chainSpec)
+    {
+        _chainSpec = chainSpec;
+    }
+
     public Task Init(INethermindApi api)
     {
-        if (!ShouldRunSteps(api))
+        if (!Enabled)
             return Task.CompletedTask;
 
         _api = (OptimismNethermindApi)api;
@@ -117,7 +121,7 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
 
     public Task InitSynchronization()
     {
-        if (_api is null || !ShouldRunSteps(_api))
+        if (_api is null || !Enabled)
             return Task.CompletedTask;
 
         ArgumentNullException.ThrowIfNull(_api.SpecProvider);
@@ -178,7 +182,7 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
 
     public async Task InitRpcModules()
     {
-        if (_api is null || !ShouldRunSteps(_api))
+        if (_api is null || !Enabled)
             return;
 
         ArgumentNullException.ThrowIfNull(_api.SpecProvider);
@@ -269,10 +273,7 @@ public class OptimismPlugin : IConsensusPlugin, ISynchronizationPlugin
 
     public bool MustInitialize => true;
 
-    public IModule? GetModule(string engineType, IConfigProvider configProvider)
-    {
-        return ShouldRunSteps(engineType) ? new OptimismModule() : null;
-    }
+    public IModule? Module => new OptimismModule();
 
     private class OptimismModule : Module
     {
