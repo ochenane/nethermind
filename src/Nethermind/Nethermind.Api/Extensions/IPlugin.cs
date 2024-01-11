@@ -28,8 +28,6 @@ namespace Nethermind.Api.Extensions
 
         Task InitRpcModules();
 
-        IModule? GetModule(string engineType, IConfigProvider configProvider) => null;
-
         bool MustInitialize { get => false; }
     }
 }
