@@ -13,15 +13,15 @@ namespace Nethermind.Init.Steps;
 
 public class InitializePrecompiles : IStep
 {
-    private ILogger _logger;
+    private ILogger<InitializePrecompiles> _logger;
     private IInitConfig _initConfig;
     private ISpecProvider _specProvider;
 
-    public InitializePrecompiles(ISpecProvider specProvider, IInitConfig initConfig, ILogManager logManager)
+    public InitializePrecompiles(ISpecProvider specProvider, IInitConfig initConfig, ILogger<InitializePrecompiles> logger)
     {
         _specProvider = specProvider;
         _initConfig = initConfig;
-        _logger = logManager.GetClassLogger<InitializePrecompiles>();
+        _logger = logger;
     }
 
     public async Task Execute(CancellationToken cancellationToken)

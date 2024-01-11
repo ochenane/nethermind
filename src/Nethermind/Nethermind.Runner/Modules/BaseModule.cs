@@ -5,11 +5,13 @@ using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
+using Antlr4.Runtime.Misc;
 using Autofac;
 using Autofac.Core;
 using Autofac.Core.Activators.Delegate;
 using Autofac.Core.Lifetime;
 using Autofac.Core.Registration;
+using Autofac.Core.Resolving.Pipeline;
 using Autofac.Features.ResolveAnything;
 using Nethermind.Api;
 using Nethermind.Blockchain.Synchronization;
@@ -60,6 +62,7 @@ public class BaseModule : Module
 
         builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource());
         builder.RegisterSource(new ConfigRegistrationSource(_configProvider));
+        builder.RegisterSource(new LoggerRegistrationSource(_logManager));
         builder.RegisterInstance(_configProvider);
         builder.RegisterInstance(_processExitSource);
         builder.RegisterInstance(_chainSpec);
@@ -125,5 +128,23 @@ public class BaseModule : Module
         }
 
         public bool IsAdapterForIndividualComponents => false;
+    }
+
+    /// <summary>
+    /// Dynamically resolve ILogger<T>
+    /// </summary>
+    private class LoggerRegistrationSource : ImplicitRegistrationSource
+    {
+        private readonly ILogManager _logManager;
+
+        public LoggerRegistrationSource(ILogManager logManager) : base(typeof(ILogger<>))
+        {
+            _logManager = logManager;
+        }
+
+        protected override object ResolveInstance<T>(IComponentContext context, ResolveRequest request)
+        {
+            return new TypedLoggerWrapper<T>(_logManager.GetClassLogger<T>());
+        }
     }
 }

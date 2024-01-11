@@ -410,7 +410,7 @@ namespace Nethermind.Runner.Test
             foreach (TestConfigProvider configProvider in GetConfigProviders(configWildcard))
             {
                 MemoryHintMan memoryHintMan = new(
-                    LimboLogs.Instance,
+                    LimboLogs.Instance.TypedLogger<MemoryHintMan>(),
                     configProvider.GetConfig<IInitConfig>(),
                     configProvider.GetConfig<IDbConfig>(),
                     configProvider.GetConfig<INetworkConfig>(),

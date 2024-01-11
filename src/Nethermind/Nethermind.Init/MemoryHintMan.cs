@@ -22,7 +22,7 @@ namespace Nethermind.Init
     /// </summary>
     public class MemoryHintMan
     {
-        private readonly ILogger _logger;
+        private readonly ILogger<MemoryHintMan> _logger;
         private readonly MallocHelper _mallocHelper;
         private readonly IInitConfig _initConfig;
         private readonly IDbConfig _dbConfig;
@@ -31,7 +31,7 @@ namespace Nethermind.Init
         private readonly ITxPoolConfig _txPoolConfig;
 
         public MemoryHintMan(
-            ILogManager logManager,
+            ILogger<MemoryHintMan> logger,
             IInitConfig initConfig,
             IDbConfig dbConfig,
             INetworkConfig networkConfig,
@@ -41,9 +41,7 @@ namespace Nethermind.Init
         )
         {
             _mallocHelper = mallocHelper ?? MallocHelper.Instance;
-            _logger = logManager?.GetClassLogger<MemoryHintMan>()
-                      ?? throw new ArgumentNullException(nameof(logManager));
-
+            _logger = logger;
             _initConfig = initConfig;
             _dbConfig = dbConfig;
             _networkConfig = networkConfig;

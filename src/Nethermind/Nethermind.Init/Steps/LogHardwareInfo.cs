@@ -15,9 +15,9 @@ public class LogHardwareInfo : IStep
 
     public bool MustInitialize => false;
 
-    public LogHardwareInfo(ILogManager logManager)
+    public LogHardwareInfo(ILogger<LogHardwareInfo> logger)
     {
-        _logger = logManager.GetClassLogger();
+        _logger = logger;
     }
 
     public Task Execute(CancellationToken cancellationToken)

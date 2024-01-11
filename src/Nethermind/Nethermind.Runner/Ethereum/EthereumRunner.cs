@@ -22,11 +22,11 @@ namespace Nethermind.Runner.Ethereum
         private readonly ILogger _logger;
         private readonly EthereumStepsManager _stepManager;
 
-        public EthereumRunner(INethermindApi api, EthereumStepsManager stepsManager)
+        public EthereumRunner(INethermindApi api, EthereumStepsManager stepsManager, ILogger<EthereumRunner> logger)
         {
             _api = api;
             _stepManager = stepsManager;
-            _logger = api.LogManager.GetClassLogger();
+            _logger = logger;
         }
 
         public async Task Start(CancellationToken cancellationToken)
