@@ -169,6 +169,7 @@ namespace Nethermind.Runner.Test
         [TestCase(false)]
         public void Big_value_at_memory_hint(bool shouldSetMallocOpts)
         {
+            _initConfig.MemoryHint = 1.GB();
             _initConfig.DisableMallocOpts = !shouldSetMallocOpts;
             SetMemoryAllowances(1);
 
