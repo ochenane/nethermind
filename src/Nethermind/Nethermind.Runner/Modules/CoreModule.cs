@@ -7,7 +7,7 @@ using Nethermind.Consensus;
 
 namespace Nethermind.Runner.Modules;
 
-public class CoreModule: Module
+public class CoreModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {

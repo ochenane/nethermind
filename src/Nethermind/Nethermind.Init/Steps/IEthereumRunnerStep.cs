@@ -24,13 +24,31 @@ namespace Nethermind.Init.Steps
         {
             foreach (Type stepType in assembly.GetExportedTypes().Where(IsStepType))
             {
-                builder.RegisterType(stepType)
-                    .AsSelf()
-                    .As<IStep>()
-                    .WithAttributeFiltering();
+                RegisterIStep(builder, stepType);
             }
         }
 
+        public static void RegisterIStep(this ContainerBuilder builder, Type stepType)
+        {
+            builder.RegisterType(stepType)
+                .AsSelf()
+                .As<IStep>()
+                .WithAttributeFiltering();
+
+            StepInfo info = new StepInfo(stepType, GetStepBaseType(stepType));
+            builder.RegisterInstance(info);
+        }
+
         private static bool IsStepType(Type t) => !t.IsInterface && !t.IsAbstract && typeof(IStep).IsAssignableFrom((Type?)t);
+        private static bool IsBaseStepType(Type t) => t != typeof(IStep) && typeof(IStep).IsAssignableFrom((Type?)t);
+        private static Type GetStepBaseType(Type type)
+        {
+            while (type.BaseType is not null && IsBaseStepType(type.BaseType))
+            {
+                type = type.BaseType;
+            }
+
+            return type;
+        }
     }
 }

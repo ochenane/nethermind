@@ -12,17 +12,9 @@ namespace Nethermind.Init.Steps
 {
     public class EthereumStepsLoader : IEthereumStepsLoader
     {
-        private readonly IEnumerable<Type> _steps;
+        private readonly IReadOnlyList<StepInfo> _steps;
 
-        public EthereumStepsLoader(ILifetimeScope scope)
-        {
-            _steps = scope.ComponentRegistry.RegistrationsFor(new TypedService(typeof(IStep)))
-                .Where(r => r.Activator is ReflectionActivator)
-                .Select(r => ((ReflectionActivator)r.Activator).LimitType)
-                .ToList();
-        }
-
-        public EthereumStepsLoader(params Type[] steps)
+        public EthereumStepsLoader(IReadOnlyList<StepInfo> steps)
         {
             _steps = steps;
         }
@@ -30,7 +22,6 @@ namespace Nethermind.Init.Steps
         public IEnumerable<StepInfo> LoadSteps()
         {
             return _steps
-                .Select(s => new StepInfo(s, GetStepBaseType(s)))
                 .GroupBy(s => s.StepBaseType)
                 .Select(g => SelectImplementation(g.ToArray(), g.Key))
                 .Where(s => s is not null)
@@ -58,14 +49,5 @@ namespace Nethermind.Init.Steps
 
         private static bool IsStepType(Type t) => typeof(IStep).IsAssignableFrom(t);
 
-        private static Type GetStepBaseType(Type type)
-        {
-            while (type.BaseType is not null && IsStepType(type.BaseType))
-            {
-                type = type.BaseType;
-            }
-
-            return type;
-        }
     }
 }

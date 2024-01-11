@@ -8,9 +8,9 @@ using Autofac;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Nethermind.Api;
-using Nethermind.Consensus.AuRa.InitializationSteps;
 using Nethermind.Init.Steps;
 using Nethermind.Logging;
+using Nethermind.Runner.Modules;
 using NUnit.Framework;
 
 namespace Nethermind.Runner.Test.Ethereum.Steps
@@ -21,13 +21,8 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         [Test]
         public async Task When_no_steps_defined()
         {
-            IContainer runnerContext = new ContainerBuilder().Build();
-
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(runnerContext);
-            EthereumStepsManager stepsManager = new EthereumStepsManager(
-                stepsLoader,
-                runnerContext,
-                LimboLogs.Instance);
+            IContainer runnerContext = CreateEmptyContainer();
+            EthereumStepsManager stepsManager = runnerContext.Resolve<EthereumStepsManager>();
 
             using CancellationTokenSource source = new CancellationTokenSource(TimeSpan.FromSeconds(1));
             await stepsManager.InitializeAll(source.Token);
@@ -37,12 +32,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         public async Task With_steps_from_here()
         {
             IContainer runnerContext = CreateNethermindApi();
-
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(runnerContext);
-            EthereumStepsManager stepsManager = new EthereumStepsManager(
-                stepsLoader,
-                runnerContext,
-                LimboLogs.Instance);
+            EthereumStepsManager stepsManager = runnerContext.Resolve<EthereumStepsManager>();
 
             using CancellationTokenSource source = new CancellationTokenSource(TimeSpan.FromSeconds(1));
 
@@ -64,12 +54,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         public async Task With_steps_from_here_AuRa()
         {
             IContainer runnerContext = CreateAuraApi();
-
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(runnerContext);
-            EthereumStepsManager stepsManager = new EthereumStepsManager(
-                stepsLoader,
-                runnerContext,
-                LimboLogs.Instance);
+            EthereumStepsManager stepsManager = runnerContext.Resolve<EthereumStepsManager>();
 
             using CancellationTokenSource source = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
@@ -87,12 +72,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         public async Task With_failing_steps()
         {
             IContainer runnerContext = CreateNethermindApi();
-
-            IEthereumStepsLoader stepsLoader = new EthereumStepsLoader(runnerContext);
-            EthereumStepsManager stepsManager = new EthereumStepsManager(
-                stepsLoader,
-                runnerContext,
-                LimboLogs.Instance);
+            EthereumStepsManager stepsManager = runnerContext.Resolve<EthereumStepsManager>();
 
             using CancellationTokenSource source = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
@@ -109,24 +89,38 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
             }
         }
 
+        private static ContainerBuilder CreateBaseContainerBuilder()
+        {
+            var builder = new ContainerBuilder();
+            builder.RegisterModule(new RunnerModule());
+            builder.RegisterInstance(LimboLogs.Instance).AsImplementedInterfaces();
+            return builder;
+        }
+
+        private static IContainer CreateEmptyContainer()
+        {
+            return CreateBaseContainerBuilder()
+                .Build();
+        }
+
         private static IContainer CreateNethermindApi()
         {
-            ContainerBuilder builder = new ContainerBuilder();
-            builder.RegisterType<StepLong>().As<IStep>().AsSelf();
-            builder.RegisterType<StepForever>().As<IStep>().AsSelf();
-            builder.RegisterType<StepA>().As<IStep>().AsSelf();
-            builder.RegisterType<StepB>().As<IStep>().AsSelf();
-            builder.RegisterType<StepCStandard>().As<IStep>().AsSelf();
+            ContainerBuilder builder = CreateBaseContainerBuilder();
+            builder.RegisterIStep(typeof(StepLong));
+            builder.RegisterIStep(typeof(StepForever));
+            builder.RegisterIStep(typeof(StepA));
+            builder.RegisterIStep(typeof(StepB));
+            builder.RegisterIStep(typeof(StepCStandard));
             return builder.Build();
         }
         private static IContainer CreateAuraApi()
         {
-            ContainerBuilder builder = new ContainerBuilder();
-            builder.RegisterType<StepLong>().As<IStep>().AsSelf();
-            builder.RegisterType<StepForever>().As<IStep>().AsSelf();
-            builder.RegisterType<StepA>().As<IStep>().AsSelf();
-            builder.RegisterType<StepB>().As<IStep>().AsSelf();
-            builder.RegisterType<StepCAuRa>().As<IStep>().AsSelf();
+            ContainerBuilder builder = CreateBaseContainerBuilder();
+            builder.RegisterIStep(typeof(StepLong));
+            builder.RegisterIStep(typeof(StepForever));
+            builder.RegisterIStep(typeof(StepA));
+            builder.RegisterIStep(typeof(StepB));
+            builder.RegisterIStep(typeof(StepCAuRa));
             return builder.Build();
         }
     }

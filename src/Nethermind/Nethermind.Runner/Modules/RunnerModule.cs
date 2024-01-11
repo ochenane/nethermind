@@ -15,10 +15,7 @@ public class RunnerModule : Module
 
         builder.RegisterType<EthereumRunner>();
         builder.RegisterType<EthereumStepsManager>();
-
         builder.RegisterType<EthereumStepsLoader>()
-            .UsingConstructor(typeof(ILifetimeScope))
-            .As<IEthereumStepsLoader>()
-            .SingleInstance();
+            .As<IEthereumStepsLoader>();
     }
 }
