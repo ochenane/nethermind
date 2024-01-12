@@ -108,8 +108,7 @@ namespace Nethermind.Api
         public IConfigProvider ConfigProvider => BaseContainer.Resolve<IConfigProvider>();
         public ICryptoRandom CryptoRandom => BaseContainer.Resolve<ICryptoRandom>();
         public IDbProvider? DbProvider { get; set; }
-        public IRocksDbFactory? RocksDbFactory { get; set; }
-        public IMemDbFactory? MemDbFactory { get; set; }
+        public IDbFactory? DbFactory { get; set; }
         public IDisconnectsAnalyzer? DisconnectsAnalyzer { get; set; }
         public IDiscoveryApp? DiscoveryApp { get; set; }
         public ISigner? EngineSigner { get; set; }
