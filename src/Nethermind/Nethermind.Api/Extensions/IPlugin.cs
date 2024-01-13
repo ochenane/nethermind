@@ -22,11 +22,11 @@ namespace Nethermind.Api.Extensions
 
         IModule? Module => null;
 
-        Task Init(INethermindApi nethermindApi);
+        Task Init(INethermindApi nethermindApi) => Task.CompletedTask;
 
-        Task InitNetworkProtocol();
+        Task InitNetworkProtocol() => Task.CompletedTask;
 
-        Task InitRpcModules();
+        Task InitRpcModules() => Task.CompletedTask;
 
         bool MustInitialize { get => false; }
     }
