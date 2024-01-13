@@ -43,9 +43,7 @@ namespace Nethermind.Synchronization.Test.SnapSync
             _inputStateTree!.Accept(accountProofCollector, _inputStateTree.RootHash);
             var proof = accountProofCollector.BuildResult();
 
-            MemDb db = new();
-            DbProvider dbProvider = new();
-            dbProvider.RegisterDb(DbNames.State, db);
+            IDbProvider dbProvider = TestMemDbProvider.Init();
             ProgressTracker progressTracker = new(null, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
             SnapProvider snapProvider = new(progressTracker, dbProvider, LimboLogs.Instance);
 
@@ -63,9 +61,7 @@ namespace Nethermind.Synchronization.Test.SnapSync
             _inputStateTree!.Accept(accountProofCollector, _inputStateTree.RootHash);
             var proof = accountProofCollector.BuildResult();
 
-            MemDb db = new();
-            DbProvider dbProvider = new();
-            dbProvider.RegisterDb(DbNames.State, db);
+            IDbProvider dbProvider = TestMemDbProvider.Init();
             ProgressTracker progressTracker = new(null, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
             SnapProvider snapProvider = new(progressTracker, dbProvider, LimboLogs.Instance);
 
@@ -79,9 +75,7 @@ namespace Nethermind.Synchronization.Test.SnapSync
         {
             Hash256 rootHash = _inputStorageTree!.RootHash;   // "..."
 
-            MemDb db = new MemDb();
-            DbProvider dbProvider = new();
-            dbProvider.RegisterDb(DbNames.State, db);
+            IDbProvider dbProvider = TestMemDbProvider.Init();
             ProgressTracker progressTracker = new(null, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
             SnapProvider snapProvider = new(progressTracker, dbProvider, LimboLogs.Instance);
 
@@ -96,9 +90,7 @@ namespace Nethermind.Synchronization.Test.SnapSync
             Hash256 rootHash = _inputStorageTree!.RootHash;   // "..."
 
             // output state
-            MemDb db = new MemDb();
-            DbProvider dbProvider = new();
-            dbProvider.RegisterDb(DbNames.State, db);
+            IDbProvider dbProvider = TestMemDbProvider.Init();
             ProgressTracker progressTracker = new(null, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
             SnapProvider snapProvider = new(progressTracker, dbProvider, LimboLogs.Instance);
 
@@ -131,9 +123,7 @@ namespace Nethermind.Synchronization.Test.SnapSync
             Hash256 rootHash = _inputStorageTree!.RootHash;   // "..."
 
             // output state
-            MemDb db = new MemDb();
-            DbProvider dbProvider = new();
-            dbProvider.RegisterDb(DbNames.State, db);
+            IDbProvider dbProvider = TestMemDbProvider.Init();
             ProgressTracker progressTracker = new(null, dbProvider.GetDb<IDb>(DbNames.State), LimboLogs.Instance);
             SnapProvider snapProvider = new(progressTracker, dbProvider, LimboLogs.Instance);
 

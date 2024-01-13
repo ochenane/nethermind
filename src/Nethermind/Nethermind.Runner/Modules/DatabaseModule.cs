@@ -172,26 +172,7 @@ public class DatabaseModule: Module
         IFileSystem fileSystem
     )
     {
-        DbProvider dbProvider = new DbProvider();
-
-        // Note: Can't do in parallel, it'll deadlock.
-        foreach (IComponentRegistration componentRegistryRegistration in ctx.ComponentRegistry.Registrations)
-        {
-            foreach (Service service in componentRegistryRegistration.Services)
-            {
-                if (service is not KeyedService keyedService) continue;
-
-                string dbName = (string) keyedService.ServiceKey;
-                if (keyedService.ServiceType.IsAssignableTo<IDb>())
-                {
-                    dbProvider.RegisterDb(dbName, ctx.ResolveNamed<IDb>(dbName));
-                }
-                if (IsSubclassOfRawGeneric(typeof(IColumnsDb<>), keyedService.ServiceType))
-                {
-                    dbProvider.RegisterColumnDb(dbName, ctx.ResolveNamed(dbName, keyedService.ServiceType));
-                }
-            }
-        }
+        DbProvider dbProvider = ctx.Resolve<DbProvider>();
 
         if (_diagnosticMode != DiagnosticMode.ReadOnlyDb)
         {

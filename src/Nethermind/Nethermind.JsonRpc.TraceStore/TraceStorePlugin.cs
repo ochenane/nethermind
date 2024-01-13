@@ -47,7 +47,6 @@ public class TraceStorePlugin : INethermindPlugin
 
             // Setup DB
             _db = _api.BaseContainer.Resolve<IDbFactory>().CreateDb(new DbSettings(DbName, DbName.ToLower()));
-            _api.DbProvider!.RegisterDb(DbName, _db);
 
             //Setup pruning if configured
             if (_config.BlocksToKeep != 0)

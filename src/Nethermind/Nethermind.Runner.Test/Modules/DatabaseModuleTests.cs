@@ -62,11 +62,18 @@ public class DatabaseModuleTests
     }
 
     [Test]
-    public void DbProvider_ThrowExceptionOnGettingNotRegisteredDb()
+    public void OnlyInitializeNeededDatabase()
     {
-        using IContainer container = InitializeStandardDb(true, DiagnosticMode.ReadOnlyDb, $"throw_on_unregistered");
+        using IContainer container = InitializeStandardDb(true, DiagnosticMode.MemDb, "mem");
+        TestMemDbFactory memDbProvider = container.Resolve<TestMemDbFactory>();
         IDbProvider dbProvider = container.Resolve<IDbProvider>();
-        Assert.Throws<ArgumentException>(() => dbProvider.GetColumnDb<ReceiptsColumns>("differentdb"));
+        memDbProvider.DbCount.Should().Be(0);
+        _ = dbProvider.BlocksDb;
+        memDbProvider.DbCount.Should().Be(1);
+        _ = dbProvider.BlocksDb;
+        memDbProvider.DbCount.Should().Be(1);
+        _ = dbProvider.HeadersDb;
+        memDbProvider.DbCount.Should().Be(2);
     }
 
     [Test]
@@ -99,6 +106,9 @@ public class DatabaseModuleTests
         builder.RegisterInstance(LimboLogs.Instance).AsImplementedInterfaces();
         builder.RegisterModule(new BaseModule());
         builder.RegisterModule(new DatabaseModule(configProvider));
+        builder.RegisterInstance(new TestMemDbFactory())
+            .As<IDbFactory>()
+            .AsSelf();
         return builder.Build();
     }
 
@@ -120,5 +130,23 @@ public class DatabaseModuleTests
     {
         if (Directory.Exists(_folderWithDbs))
             Directory.Delete(_folderWithDbs, true);
+    }
+
+    private class TestMemDbFactory : IDbFactory
+    {
+        public int DbCount = 0;
+        private IDbFactory _dbFactoryImplementation = new MemDbFactory();
+
+        public IDb CreateDb(DbSettings dbSettings)
+        {
+            DbCount++;
+            return _dbFactoryImplementation.CreateDb(dbSettings);
+        }
+
+        public IColumnsDb<T> CreateColumnsDb<T>(DbSettings dbSettings) where T : struct, Enum
+        {
+            DbCount++;
+            return _dbFactoryImplementation.CreateColumnsDb<T>(dbSettings);
+        }
     }
 }
