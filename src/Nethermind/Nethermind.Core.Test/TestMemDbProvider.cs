@@ -21,8 +21,8 @@ namespace Nethermind.Db
 
         public static IDbProvider Init()
         {
-            IInitConfig initConfig = new InitConfig() {};
-            ISyncConfig syncConfig = new SyncConfig() {};
+            IInitConfig initConfig = new InitConfig() { };
+            ISyncConfig syncConfig = new SyncConfig() { };
             IConfigProvider configProvider = Substitute.For<IConfigProvider>();
             configProvider.GetConfig<IInitConfig>().Returns(initConfig);
             configProvider.GetConfig<ISyncConfig>().Returns(syncConfig);

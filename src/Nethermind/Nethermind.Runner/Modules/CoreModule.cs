@@ -11,6 +11,7 @@ using Nethermind.Blockchain.Blocks;
 using Nethermind.Blockchain.Find;
 using Nethermind.Blockchain.Headers;
 using Nethermind.Blockchain.Receipts;
+using Nethermind.Config;
 using Nethermind.Consensus;
 using Nethermind.Core;
 using Nethermind.Core.Specs;
@@ -26,6 +27,42 @@ namespace Nethermind.Runner.Modules;
 
 public class CoreModule : Module
 {
+    private string _baseDbPath;
+    private bool _isUsingMemdb;
+    private bool _storeReceipts;
+    private bool _isMining;
+    private bool _persistentBlobTxStorages;
+    private bool _useCompactReceiptStore;
+
+    public CoreModule(IConfigProvider configProvider)
+    {
+        IInitConfig initConfig = configProvider.GetConfig<IInitConfig>();
+        _baseDbPath = initConfig.BaseDbPath;
+        _isUsingMemdb = initConfig.DiagnosticMode == DiagnosticMode.MemDb;
+        _storeReceipts = initConfig.StoreReceipts;
+        _persistentBlobTxStorages = configProvider.GetConfig<ITxPoolConfig>().BlobsSupport.IsPersistentStorage();
+        _useCompactReceiptStore = configProvider.GetConfig<IReceiptConfig>().CompactReceiptStore;
+        _isMining = configProvider.GetConfig<IMiningConfig>().Enabled;
+    }
+
+    public CoreModule(
+        string baseDbPath = "",
+        bool isUsingMemdb = true,
+        bool storeReceipts = true,
+        bool isMining = true,
+        bool persistentBlobTxStorages = true,
+        bool useCompactReceiptStore = true
+    )
+    {
+        // Used for testing
+        _baseDbPath = baseDbPath;
+        _isUsingMemdb = isUsingMemdb;
+        _storeReceipts = storeReceipts;
+        _isMining = isMining;
+        _persistentBlobTxStorages = persistentBlobTxStorages;
+        _useCompactReceiptStore = useCompactReceiptStore;
+    }
+
     protected override void Load(ContainerBuilder builder)
     {
         base.Load(builder);
@@ -38,19 +75,9 @@ public class CoreModule : Module
             .As<INethermindApi>()
             .SingleInstance();
 
-        // Needed to declare AttributeFiltering
-        builder.RegisterType<BlobTxStorage>()
-            .WithAttributeFiltering()
-            .SingleInstance();
-
-        builder.Register<IComponentContext, ITxPoolConfig, IBlobTxStorage>(BlobTxStorageConfig)
-            .SingleInstance();
-
-        builder.Register<IInitConfig, IFileStoreFactory>(BloomFileStoreFactory)
-            .SingleInstance();
-        builder.RegisterType<BloomStorage>().WithAttributeFiltering();
-        builder.Register<IComponentContext, IBloomConfig, IBloomStorage>(BloomStorageFactory)
-            .SingleInstance();
+        ConfigureBlobTxStore(builder);
+        ConfigureBloom(builder);
+        ConfigureReceipts(builder);
 
         builder.RegisterType<ChainLevelInfoRepository>()
             .WithAttributeFiltering()
@@ -78,50 +105,88 @@ public class CoreModule : Module
             .As<IBlockTree>()
             .SingleInstance();
 
+        ConfigureSigner(builder);
+    }
+
+    private void ConfigureSigner(ContainerBuilder builder)
+    {
         builder.RegisterType<EthereumEcdsa>().AsImplementedInterfaces();
+        if (_isMining)
+        {
+            builder.RegisterType<Signer>()
+                .As<ISignerStore>()
+                .As<ISigner>()
+                .SingleInstance();
+        }
+        else
+        {
+            builder.RegisterInstance(NullSigner.Instance)
+                .As<ISignerStore>()
+                .As<ISigner>()
+                .SingleInstance();
+        }
+    }
 
-        builder.RegisterType<Signer>().SingleInstance();
-        builder.Register(SignerFactory);
-        builder.Register(SignerStoreFactory);
+    private void ConfigureBlobTxStore(ContainerBuilder builder)
+    {
+        if (_persistentBlobTxStorages)
+        {
+            builder.RegisterType<BlobTxStorage>()
+                .WithAttributeFiltering()
+                .As<IBlobTxStorage>()
+                .SingleInstance();
+        }
+        else
+        {
+            builder.RegisterInstance(NullBlobTxStorage.Instance)
+                .As<IBlobTxStorage>();
+        }
+    }
 
-        builder.RegisterType<PersistentReceiptStorage>().WithAttributeFiltering().SingleInstance();
-        builder.Register(ReceiptStorageStoreFactory).SingleInstance();
+    private void ConfigureReceipts(ContainerBuilder builder)
+    {
+        if (_storeReceipts)
+        {
+            builder.RegisterType<PersistentReceiptStorage>()
+                .WithAttributeFiltering()
+                .WithParameter(
+                    TypedParameter.From(
+                        new ReceiptArrayStorageDecoder(_useCompactReceiptStore))
+                )
+                .As<IReceiptStorage>();
+        }
+        else
+        {
+            builder.RegisterInstance(NullReceiptStorage.Instance)
+                .As<IReceiptStorage>();
+        }
+
+
         builder.RegisterType<FullInfoReceiptFinder>().As<IReceiptFinder>();
         builder.RegisterType<ReceiptsRecovery>().As<IReceiptsRecovery>()
             .UsingConstructor(typeof(IEthereumEcdsa), typeof(ISpecProvider), typeof(IReceiptConfig));
         builder.RegisterType<LogFinder>().As<ILogFinder>();
     }
 
-    private IReceiptStorage ReceiptStorageStoreFactory(IComponentContext ctx)
+    private void ConfigureBloom(ContainerBuilder builder)
     {
-        if (ctx.Resolve<IInitConfig>().StoreReceipts)
+        if (_isUsingMemdb)
         {
-            return ctx.Resolve<PersistentReceiptStorage>(
-                TypedParameter.From(
-                    new ReceiptArrayStorageDecoder(ctx.Resolve<IReceiptConfig>().CompactReceiptStore)));
+            builder.RegisterType<InMemoryDictionaryFileStoreFactory>()
+                .As<IFileStoreFactory>()
+                .SingleInstance();
+        }
+        else
+        {
+            builder.Register((_) => new FixedSizeFileStoreFactory(Path.Combine(_baseDbPath, DbNames.Bloom),
+                    DbNames.Bloom, Bloom.ByteLength))
+                .As<IFileStoreFactory>()
+                .SingleInstance();
         }
 
-        return NullReceiptStorage.Instance;
-    }
-
-    private ISigner SignerFactory(IComponentContext ctx)
-    {
-        if (!ctx.Resolve<IMiningConfig>().Enabled)
-        {
-            return NullSigner.Instance;
-        }
-
-        return ctx.Resolve<Signer>();
-    }
-
-    private ISignerStore SignerStoreFactory(IComponentContext ctx)
-    {
-        if (!ctx.Resolve<IMiningConfig>().Enabled)
-        {
-            return NullSigner.Instance;
-        }
-
-        return ctx.Resolve<Signer>();
+        builder.RegisterType<BloomStorage>().WithAttributeFiltering();
+        builder.Register<IComponentContext, IBloomConfig, IBloomStorage>(BloomStorageFactory)
+            .SingleInstance();
     }
 
     private IBloomStorage BloomStorageFactory(IComponentContext ctx, IBloomConfig bloomConfig)
@@ -130,22 +195,4 @@ public class CoreModule : Module
             ? ctx.Resolve<BloomStorage>()
             : NullBloomStorage.Instance;
     }
-
-    private IFileStoreFactory BloomFileStoreFactory(IInitConfig initConfig)
-    {
-        return initConfig.DiagnosticMode == DiagnosticMode.MemDb
-            ? new InMemoryDictionaryFileStoreFactory()
-            : new FixedSizeFileStoreFactory(Path.Combine(initConfig.BaseDbPath, DbNames.Bloom), DbNames.Bloom, Bloom.ByteLength);
-    }
-
-    private static IBlobTxStorage BlobTxStorageConfig(IComponentContext ctx, ITxPoolConfig txPoolConfig)
-    {
-        if (txPoolConfig.BlobsSupport.IsPersistentStorage())
-        {
-            return ctx.Resolve<BlobTxStorage>();
-        }
-
-        return NullBlobTxStorage.Instance;
-    }
-
 }

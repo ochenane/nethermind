@@ -30,7 +30,7 @@ namespace Nethermind.Crypto
         private readonly ulong _chainIdValue;
         private readonly ILogger _logger;
 
-        public EthereumEcdsa(ISpecProvider specProvider, ILogger logger):this(specProvider.ChainId, logger)
+        public EthereumEcdsa(ISpecProvider specProvider, ILogger logger) : this(specProvider.ChainId, logger)
         {
 
         }

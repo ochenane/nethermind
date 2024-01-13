@@ -15,7 +15,7 @@ public partial class Build
         ContainerBuilder builder = new ContainerBuilder();
         builder.RegisterInstance(LimboLogs.Instance).AsImplementedInterfaces();
         builder.RegisterModule(new BaseModule());
-        builder.RegisterModule(new DatabaseModule(storeReceipts: true, diagnosticMode: DiagnosticMode.MemDb));
+        builder.RegisterModule(new DatabaseModule());
         builder.RegisterModule(new CoreModule());
         return builder;
     }

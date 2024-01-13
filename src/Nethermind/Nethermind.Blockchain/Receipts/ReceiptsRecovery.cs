@@ -17,7 +17,7 @@ namespace Nethermind.Blockchain.Receipts
         private readonly bool _reinsertReceiptOnRecover;
 
         public ReceiptsRecovery(IEthereumEcdsa ecdsa, ISpecProvider specProvider, IReceiptConfig receiptConfig)
-            :this(ecdsa, specProvider, !receiptConfig.CompactReceiptStore)
+            : this(ecdsa, specProvider, !receiptConfig.CompactReceiptStore)
         {
 
         }

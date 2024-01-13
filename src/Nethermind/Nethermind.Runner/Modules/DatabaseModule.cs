@@ -24,7 +24,7 @@ using Metrics = Nethermind.Db.Metrics;
 
 namespace Nethermind.Runner.Modules;
 
-public class DatabaseModule: Module
+public class DatabaseModule : Module
 {
     private bool _storeReceipts;
     private DiagnosticMode _diagnosticMode;
@@ -37,10 +37,11 @@ public class DatabaseModule: Module
         _diagnosticMode = initConfig.DiagnosticMode;
     }
 
-    public DatabaseModule(bool storeReceipts, DiagnosticMode diagnosticMode)
+    public DatabaseModule()
     {
-        _storeReceipts = storeReceipts;
-        _diagnosticMode = diagnosticMode;
+        // Used for testing
+        _storeReceipts = true;
+        _diagnosticMode = DiagnosticMode.MemDb;
     }
 
     private IDbFactory InitializeDbFactory(IComponentContext ctx)
@@ -162,18 +163,5 @@ public class DatabaseModule: Module
         }
 
         return new ReadOnlyDbProvider(dbProvider, _storeReceipts); // ToDo storeReceipts as createInMemoryWriteStore - bug?
-    }
-
-
-    private static bool IsSubclassOfRawGeneric(Type generic, Type toCheck) {
-        // Why C#... why...
-        while (toCheck != null && toCheck != typeof(object)) {
-            var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
-            if (generic == cur) {
-                return true;
-            }
-            toCheck = toCheck.BaseType;
-        }
-        return false;
     }
 }

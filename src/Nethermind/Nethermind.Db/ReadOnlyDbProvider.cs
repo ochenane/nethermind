@@ -43,7 +43,7 @@ namespace Nethermind.Db
 
         public IColumnsDb<ReceiptsColumns> ReceiptsDb => GetColumnDb<ReceiptsColumns>(DbNames.Receipts, () => _wrappedProvider.ReceiptsDb);
 
-        public IColumnsDb<BlobTxsColumns> BlobTransactionsDb  => GetColumnDb<BlobTxsColumns>(DbNames.BlobTransactions, () => _wrappedProvider.BlobTransactionsDb);
+        public IColumnsDb<BlobTxsColumns> BlobTransactionsDb => GetColumnDb<BlobTxsColumns>(DbNames.BlobTransactions, () => _wrappedProvider.BlobTransactionsDb);
 
         public T GetDb<T>(string dbName) where T : class, IDb
         {
