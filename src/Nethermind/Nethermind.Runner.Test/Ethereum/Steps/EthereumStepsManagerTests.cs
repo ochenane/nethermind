@@ -23,7 +23,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         public void When_no_steps_defined()
         {
             IContainer runnerContext = CreateEmptyContainer();
-            Action action = ()=> runnerContext.Resolve<EthereumStepsManager>();
+            Action action = () => runnerContext.Resolve<EthereumStepsManager>();
             action.Should().Throw<DependencyResolutionException>();
         }
 

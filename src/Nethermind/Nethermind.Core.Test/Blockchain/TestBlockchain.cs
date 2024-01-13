@@ -124,15 +124,11 @@ public class TestBlockchain : IDisposable
     {
         Timestamper = new ManualTimestamper(new DateTime(2020, 2, 15, 12, 50, 30, DateTimeKind.Utc));
 
-        ISpecProvider specProvider2 = CreateSpecProvider(specProvider ?? MainnetSpecProvider.Instance);
         ContainerBuilder containerBuilder = Builders.Build.A.BasicTestContainerBuilder();
-        containerBuilder.RegisterInstance(specProvider2);
+        containerBuilder.RegisterInstance(CreateSpecProvider(specProvider ?? MainnetSpecProvider.Instance));
         containerBuilder.RegisterInstance(Timestamper).AsImplementedInterfaces();
         ConfigureContainer(containerBuilder);
         Container = containerBuilder.Build();
-
-        ISpecProvider specProvider3 = SpecProvider;
-        Console.Out.WriteLine($"Spec {specProvider2}, {specProvider3}");
 
         EthereumEcdsa = new EthereumEcdsa(SpecProvider.ChainId, LogManager);
         DbProvider = await CreateDbProvider();
