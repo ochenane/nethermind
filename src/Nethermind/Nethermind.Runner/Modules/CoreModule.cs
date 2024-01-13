@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using Autofac;
+using Autofac.Features.AttributeFilters;
 using Nethermind.Api;
 using Nethermind.Consensus;
+using Nethermind.TxPool;
 
 namespace Nethermind.Runner.Modules;
 
@@ -20,5 +22,23 @@ public class CoreModule : Module
         builder.RegisterType<NethermindApi>()
             .As<INethermindApi>()
             .SingleInstance();
+
+        // Needed to declare AttributeFiltering
+        builder.RegisterType<BlobTxStorage>()
+            .WithAttributeFiltering()
+            .SingleInstance();
+
+        builder.Register<IComponentContext, ITxPoolConfig, IBlobTxStorage>(BlobTxStorageConfig)
+            .SingleInstance();
+    }
+
+    private static IBlobTxStorage BlobTxStorageConfig(IComponentContext ctx, ITxPoolConfig txPoolConfig)
+    {
+        if (txPoolConfig.BlobsSupport.IsPersistentStorage())
+        {
+            return ctx.Resolve<BlobTxStorage>();
+        }
+
+        return NullBlobTxStorage.Instance;
     }
 }

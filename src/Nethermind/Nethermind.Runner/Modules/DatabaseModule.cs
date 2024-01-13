@@ -99,24 +99,6 @@ public class DatabaseModule: Module
 
         builder.Register<IFileSystem, IDbProvider>(InitDbProvider)
             .SingleInstance();
-
-        // Needed to declare AttributeFiltering
-        builder.RegisterType<BlobTxStorage>()
-            .WithAttributeFiltering()
-            .SingleInstance();
-
-        builder.Register<IComponentContext, ITxPoolConfig, IBlobTxStorage>(BlobTxStorageConfig)
-            .SingleInstance();
-    }
-
-    private static IBlobTxStorage BlobTxStorageConfig(IComponentContext ctx, ITxPoolConfig txPoolConfig)
-    {
-        if (txPoolConfig.BlobsSupport.IsPersistentStorage())
-        {
-            return ctx.Resolve<BlobTxStorage>();
-        }
-
-        return NullBlobTxStorage.Instance;
     }
 
     private static IDb StateDbFactory(IDbFactory dbFactory, IFileSystem fileSystem)

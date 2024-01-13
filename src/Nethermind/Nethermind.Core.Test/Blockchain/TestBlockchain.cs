@@ -430,6 +430,7 @@ public class TestBlockchain : IDisposable
         BlockProducer?.StopAsync();
         Container.Dispose();
         _trieStoreWatcher?.Dispose();
+        Container.Dispose();
     }
 
     /// <summary>

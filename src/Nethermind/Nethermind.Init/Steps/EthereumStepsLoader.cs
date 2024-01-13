@@ -14,9 +14,9 @@ namespace Nethermind.Init.Steps
     {
         private readonly IReadOnlyList<StepInfo> _steps;
 
-        public EthereumStepsLoader(IReadOnlyList<StepInfo>? steps = null)
+        public EthereumStepsLoader(IReadOnlyList<StepInfo> steps)
         {
-            _steps = steps ?? Array.Empty<StepInfo>();
+            _steps = steps;
         }
 
         public IEnumerable<StepInfo> LoadSteps()
