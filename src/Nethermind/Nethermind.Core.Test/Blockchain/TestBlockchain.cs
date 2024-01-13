@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Core;
+using Nethermind.Api;
 using Nethermind.Blockchain;
 using Nethermind.Blockchain.Find;
 using Nethermind.Blockchain.Receipts;
@@ -131,8 +132,7 @@ public class TestBlockchain : IDisposable
         ContainerBuilder builder = Builders.Build.A.BasicTestContainerBuilder();
         builder.RegisterInstance(configProvider);
         builder.RegisterModule(new BaseModule());
-        builder.RegisterModule(new DatabaseModule(configProvider));
-        builder.RegisterInstance<IDbFactory>(new MemDbFactory());
+        builder.RegisterModule(new DatabaseModule(storeReceipts: true, diagnosticMode: DiagnosticMode.MemDb));
         builder.RegisterInstance(CreateSpecProvider(specProvider ?? MainnetSpecProvider.Instance));
         builder.RegisterInstance(Timestamper).AsImplementedInterfaces();
         ConfigureContainer(builder);

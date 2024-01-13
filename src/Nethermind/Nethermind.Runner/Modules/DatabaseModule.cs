@@ -27,23 +27,19 @@ namespace Nethermind.Runner.Modules;
 public class DatabaseModule: Module
 {
     private bool _storeReceipts;
-    private bool _useBlobsDb;
     private DiagnosticMode _diagnosticMode;
 
     public DatabaseModule(IConfigProvider configProvider)
     {
         IInitConfig initConfig = configProvider.GetConfig<IInitConfig>();
         ISyncConfig syncConfig = configProvider.GetConfig<ISyncConfig>();
-        ITxPoolConfig txPoolConfig = configProvider.GetConfig<ITxPoolConfig>();
         _storeReceipts = initConfig.StoreReceipts || syncConfig.DownloadReceiptsInFastSync;
-        _useBlobsDb = txPoolConfig.BlobsSupport.IsPersistentStorage();
         _diagnosticMode = initConfig.DiagnosticMode;
     }
 
-    public DatabaseModule(bool storeReceipts, bool useBlobsDb, DiagnosticMode diagnosticMode)
+    public DatabaseModule(bool storeReceipts, DiagnosticMode diagnosticMode)
     {
         _storeReceipts = storeReceipts;
-        _useBlobsDb = useBlobsDb;
         _diagnosticMode = diagnosticMode;
     }
 
@@ -94,10 +90,8 @@ public class DatabaseModule: Module
 
         RegisterColumnsDb<ReceiptsColumns>(builder, DbNames.Receipts, () => Metrics.ReceiptsDbReads++, () => Metrics.ReceiptsDbWrites++, readOnly: !_storeReceipts);
 
-        if (_useBlobsDb)
-        {
-            RegisterColumnsDb<BlobTxsColumns>(builder, DbNames.BlobTransactions, () => Metrics.BlobTransactionsDbReads++, () => Metrics.BlobTransactionsDbWrites++);
-        }
+        // Note: this is lazy
+        RegisterColumnsDb<BlobTxsColumns>(builder, DbNames.BlobTransactions, () => Metrics.BlobTransactionsDbReads++, () => Metrics.BlobTransactionsDbWrites++);
 
         builder.Register<IDbFactory, IFileSystem, IDb>(StateDbFactory)
             .Named<IDb>(DbNames.State)
@@ -106,18 +100,23 @@ public class DatabaseModule: Module
         builder.Register<IFileSystem, IDbProvider>(InitDbProvider)
             .SingleInstance();
 
-        if (_useBlobsDb)
+        // Needed to declare AttributeFiltering
+        builder.RegisterType<BlobTxStorage>()
+            .WithAttributeFiltering()
+            .SingleInstance();
+
+        builder.Register<IComponentContext, ITxPoolConfig, IBlobTxStorage>(BlobTxStorageConfig)
+            .SingleInstance();
+    }
+
+    private static IBlobTxStorage BlobTxStorageConfig(IComponentContext ctx, ITxPoolConfig txPoolConfig)
+    {
+        if (txPoolConfig.BlobsSupport.IsPersistentStorage())
         {
-            builder.RegisterType<BlobTxStorage>()
-                .WithAttributeFiltering()
-                .As<IBlobTxStorage>()
-                .SingleInstance();
+            return ctx.Resolve<BlobTxStorage>();
         }
-        else
-        {
-            builder.RegisterInstance(NullBlobTxStorage.Instance)
-                .As<IBlobTxStorage>();
-        }
+
+        return NullBlobTxStorage.Instance;
     }
 
     private static IDb StateDbFactory(IDbFactory dbFactory, IFileSystem fileSystem)
@@ -152,6 +151,7 @@ public class DatabaseModule: Module
 
         builder.Register(factory)
             .Named<IColumnsDb<T>>(dbName)
+            .As<IColumnsDb<T>>() // You don't need name for columns as T enum exist... Unless for sme reason you want more than one.
             .SingleInstance();
     }
 
