@@ -62,18 +62,51 @@ public class DatabaseModuleTests
     }
 
     [Test]
+    public void Initialize_RpcDb()
+    {
+        void ValidateDb<T>(params object[] dbs)
+        {
+            foreach (object db in dbs)
+            {
+                db.Should().BeAssignableTo<T>();
+            }
+        }
+
+        using IContainer container = InitializeStandardDb(true, DiagnosticMode.RpcDb, $"rpcs");
+        IDbProvider memDbProvider = container.Resolve<IDbProvider>();
+
+        ValidateDb<ReadOnlyColumnsDb<ReceiptsColumns>>(
+            memDbProvider.ReceiptsDb);
+
+        ValidateDb<ReadOnlyDb>(
+            memDbProvider.BlocksDb,
+            memDbProvider.BloomDb,
+            memDbProvider.HeadersDb,
+            memDbProvider.BlockInfosDb);
+
+        ValidateDb<ReadOnlyDb>(
+            memDbProvider.CodeDb);
+
+        ValidateDb<FullPruningDb>(
+            memDbProvider.StateDb);
+    }
+
+    [Test]
     public void OnlyInitializeNeededDatabase()
     {
-        using IContainer container = InitializeStandardDb(true, DiagnosticMode.MemDb, "mem");
-        TestMemDbFactory memDbProvider = container.Resolve<TestMemDbFactory>();
+        ContainerBuilder builder = CreateStandardBuilder(true, DiagnosticMode.MemDb, "mem");
+        TestMemDbFactory dbFactory = new TestMemDbFactory();
+        builder.RegisterInstance(dbFactory).As<IDbFactory>();
+        using IContainer container = builder.Build();
         IDbProvider dbProvider = container.Resolve<IDbProvider>();
-        memDbProvider.DbCount.Should().Be(0);
+
+        dbFactory.DbCount.Should().Be(0);
         _ = dbProvider.BlocksDb;
-        memDbProvider.DbCount.Should().Be(1);
+        dbFactory.DbCount.Should().Be(1);
         _ = dbProvider.BlocksDb;
-        memDbProvider.DbCount.Should().Be(1);
+        dbFactory.DbCount.Should().Be(1);
         _ = dbProvider.HeadersDb;
-        memDbProvider.DbCount.Should().Be(2);
+        dbFactory.DbCount.Should().Be(2);
     }
 
     [Test]
@@ -86,11 +119,17 @@ public class DatabaseModuleTests
 
     private IContainer InitializeStandardDb(bool useReceipts, DiagnosticMode diagnosticMode, string path)
     {
+        return CreateStandardBuilder(useReceipts, diagnosticMode, path).Build();
+    }
+
+    private ContainerBuilder CreateStandardBuilder(bool useReceipts, DiagnosticMode diagnosticMode, string path)
+    {
         IConfigProvider configProvider = Substitute.For<IConfigProvider>();
         InitConfig initConfig = new InitConfig()
         {
             DiagnosticMode = diagnosticMode,
             BaseDbPath = path,
+            RpcDbUrl = "http://test.com/",
             StoreReceipts = useReceipts
         };
         SyncConfig syncConfig = new SyncConfig()
@@ -106,10 +145,7 @@ public class DatabaseModuleTests
         builder.RegisterInstance(LimboLogs.Instance).AsImplementedInterfaces();
         builder.RegisterModule(new BaseModule());
         builder.RegisterModule(new DatabaseModule(configProvider));
-        builder.RegisterInstance(new TestMemDbFactory())
-            .As<IDbFactory>()
-            .AsSelf();
-        return builder.Build();
+        return builder;
     }
 
     private static Type GetReceiptsType(bool useReceipts, Type receiptType = null) => useReceipts ? receiptType ?? typeof(ColumnsDb<ReceiptsColumns>) : typeof(ReadOnlyColumnsDb<ReceiptsColumns>);
