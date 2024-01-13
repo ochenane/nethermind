@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Core;
 using FluentAssertions;
 using FluentAssertions.Execution;
 using Nethermind.Api;
@@ -19,13 +20,11 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
     public class EthereumStepsManagerTests
     {
         [Test]
-        public async Task When_no_steps_defined()
+        public void When_no_steps_defined()
         {
             IContainer runnerContext = CreateEmptyContainer();
-            EthereumStepsManager stepsManager = runnerContext.Resolve<EthereumStepsManager>();
-
-            using CancellationTokenSource source = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-            await stepsManager.InitializeAll(source.Token);
+            Action action = ()=> runnerContext.Resolve<EthereumStepsManager>();
+            action.Should().Throw<DependencyResolutionException>();
         }
 
         [Test]
@@ -92,9 +91,9 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         private static ContainerBuilder CreateBaseContainerBuilder()
         {
             var builder = new ContainerBuilder();
-            BaseModule.LoggerMiddleware.Configure(builder, LimboLogs.Instance);
-            builder.RegisterModule(new RunnerModule());
             builder.RegisterInstance(LimboLogs.Instance).AsImplementedInterfaces();
+            builder.RegisterModule(new BaseModule());
+            builder.RegisterModule(new RunnerModule());
             return builder;
         }
 

@@ -16,11 +16,6 @@ namespace Nethermind.Config
         T GetConfig<T>() where T : IConfig;
 
         /// <summary>
-        /// Same as its overload, but not generic.
-        /// </summary>
-        object GetConfig(Type t);
-
-        /// <summary>
         /// Gets the value exactly in the format of the configuration data source.
         /// </summary>
         /// <param name="category">Configuration category (e.g. Init).</param>

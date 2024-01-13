@@ -96,31 +96,29 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
         public MergeAuRaTestBlockchain(IMergeConfig? mergeConfig = null, IPayloadPreparationService? mockedPayloadPreparationService = null)
             : base(mergeConfig, mockedPayloadPreparationService)
         {
-            SealEngineType = Core.SealEngineType.AuRa;
+        }
+
+        protected override void ConfigureContainer(ContainerBuilder builder)
+        {
+            base.ConfigureContainer(builder);
+
+            builder.RegisterModule(new AuRaPlugin.AuraModule());
+            builder.RegisterInstance(new ConfigProvider()).AsImplementedInterfaces();
+            builder.RegisterInstance(Substitute.For<IProcessExitSource>());
+            builder.RegisterInstance(new ChainSpec()
+            {
+                SealEngineType = Core.SealEngineType.AuRa,
+                AuRa = new()
+                {
+                    WithdrawalContractAddress = new("0xbabe2bed00000000000000000000000000000003")
+                },
+                Parameters = new()
+            });
         }
 
         protected override IBlockProcessor CreateBlockProcessor()
         {
-            ContainerBuilder containerBuilder = new ContainerBuilder();
-            containerBuilder.RegisterModule(new BaseModule(
-                new ConfigProvider(),
-                Substitute.For<IProcessExitSource>(),
-                    new ChainSpec
-                    {
-                        AuRa = new()
-                        {
-                            WithdrawalContractAddress = new("0xbabe2bed00000000000000000000000000000003")
-                        },
-                        Parameters = new()
-                    },
-                new EthereumJsonSerializer(),
-                LogManager
-            ));
-            containerBuilder.RegisterModule(new AuRaPlugin.AuraModule());
-            containerBuilder.RegisterInstance(SpecProvider).As<ISpecProvider>();
-            IContainer container = containerBuilder.Build();
-
-            _api = container.Resolve<AuRaNethermindApi>();
+            _api = Container.Resolve<AuRaNethermindApi>();
 
             _api.BlockTree = BlockTree;
             _api.DbProvider = DbProvider;
@@ -130,8 +128,8 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
 
             WithdrawalContractFactory withdrawalContractFactory = new(((INethermindApi)_api).ChainSpec!.AuRa, _api.AbiEncoder);
             WithdrawalProcessor = new AuraWithdrawalProcessor(
-                    withdrawalContractFactory.Create(TxProcessor),
-                    LogManager
+                withdrawalContractFactory.Create(TxProcessor),
+                LogManager
             );
 
             BlockValidator = CreateBlockValidator();

@@ -24,42 +24,23 @@ using Module = Autofac.Module;
 
 namespace Nethermind.Runner.Modules;
 
+/// <summary>
+/// Basic common behaviour such as instrumentation and system related stuff. Should be completely compatible in all
+/// situation and can be run in tests.
+/// </summary>
 public class BaseModule : Module
 {
-    private readonly IConfigProvider _configProvider;
-    private readonly IProcessExitSource _processExitSource;
-    private readonly ChainSpec _chainSpec;
-    private readonly ILogManager _logManager;
-    private readonly IJsonSerializer _jsonSerializer;
-
-    public BaseModule(
-        IConfigProvider configProvider,
-        IProcessExitSource processExitSource,
-        ChainSpec chainSpec,
-        IJsonSerializer jsonSerializer,
-        ILogManager logManager
-    )
-    {
-        _configProvider = configProvider;
-        _processExitSource = processExitSource;
-        _chainSpec = chainSpec;
-        _jsonSerializer = jsonSerializer;
-        _logManager = logManager;
-
-        SetLoggerVariables(_chainSpec, _logManager);
-    }
-
     protected override void Load(ContainerBuilder builder)
     {
         base.Load(builder);
 
         builder.RegisterSource(new AnyConcreteTypeNotAlreadyRegisteredSource());
-        builder.RegisterSource(new ConfigRegistrationSource(_configProvider));
-        builder.RegisterInstance(_configProvider);
-        builder.RegisterInstance(_processExitSource);
-        builder.RegisterInstance(_chainSpec);
-        builder.RegisterInstance(_jsonSerializer);
-        builder.RegisterInstance(_logManager);
+        builder.RegisterSource(new ConfigRegistrationSource());
+        LoggerMiddleware.Configure(builder);
+
+        builder.RegisterType<EthereumJsonSerializer>()
+            .As<IJsonSerializer>()
+            .IfNotRegistered(typeof(IJsonSerializer));
 
         builder.RegisterType<ChainSpecBasedSpecProvider>()
             .As<ISpecProvider>()
@@ -77,28 +58,13 @@ public class BaseModule : Module
 
         builder.RegisterInstance(new FileSystem())
             .As<IFileSystem>();
-
-        LoggerMiddleware.Configure(builder, _logManager);
-    }
-
-    private void SetLoggerVariables(ChainSpec chainSpec, ILogManager logManager)
-    {
-        logManager.SetGlobalVariable("chain", chainSpec.Name);
-        logManager.SetGlobalVariable("chainId", chainSpec.ChainId);
-        logManager.SetGlobalVariable("engine", chainSpec.SealEngineType);
     }
 
     /// <summary>
     /// Dynamically resolve IConfig<T>
     /// </summary>
-    internal class ConfigRegistrationSource : IRegistrationSource
+    private class ConfigRegistrationSource : IRegistrationSource
     {
-        private readonly IConfigProvider _configProvider;
-
-        internal ConfigRegistrationSource(IConfigProvider configProvider)
-        {
-            _configProvider = configProvider;
-        }
         public IEnumerable<IComponentRegistration> RegistrationsFor(Service service, Func<Service, IEnumerable<ServiceRegistration>> registrationAccessor)
         {
             IServiceWithType swt = service as IServiceWithType;
@@ -111,7 +77,15 @@ public class BaseModule : Module
             // Dynamically resolve IConfig
             ComponentRegistration registration = new ComponentRegistration(
                 Guid.NewGuid(),
-                new DelegateActivator(swt.ServiceType, (c, p) => _configProvider.GetConfig(swt.ServiceType)),
+                new DelegateActivator(swt.ServiceType, (c, p) =>
+                {
+                    IConfigProvider configProvider = c.Resolve<IConfigProvider>();
+                    object config = typeof(IConfigProvider)
+                        .GetMethod("GetConfig")
+                        .MakeGenericMethod(swt.ServiceType)
+                        .Invoke(configProvider, new object[] { });
+                    return config;
+                }),
                 new RootScopeLifetime(),
                 InstanceSharing.Shared,
                 InstanceOwnership.OwnedByLifetimeScope,
@@ -127,13 +101,10 @@ public class BaseModule : Module
     /// <summary>
     /// For automatically resolving ILogger
     /// </summary>
-    public class LoggerMiddleware : IResolveMiddleware
+    private class LoggerMiddleware : IResolveMiddleware
     {
-        private readonly ILogManager _logManager;
-
-        public LoggerMiddleware(ILogManager logManager)
+        private LoggerMiddleware()
         {
-            _logManager = logManager;
         }
 
         public PipelinePhase Phase => PipelinePhase.ParameterSelection;
@@ -146,7 +117,7 @@ public class BaseModule : Module
                 {
                     new ResolvedParameter(
                         (p, i) => p.ParameterType == typeof(ILogger),
-                        (p, i) => _logManager.GetClassLogger(p.Member.DeclaringType)
+                        (p, i) => i.Resolve<ILogManager>().GetClassLogger(p.Member.DeclaringType)
                     ),
                 }));
 
@@ -154,9 +125,9 @@ public class BaseModule : Module
             next(context);
         }
 
-        public static void Configure(ContainerBuilder builder, ILogManager logManager)
+        public static void Configure(ContainerBuilder builder)
         {
-            LoggerMiddleware loggerMiddleware = new LoggerMiddleware(logManager);
+            LoggerMiddleware loggerMiddleware = new LoggerMiddleware();
             builder.ComponentRegistryBuilder.Registered += (senter, args) =>
             {
                 args.ComponentRegistration.PipelineBuilding += (sender2, pipeline) =>

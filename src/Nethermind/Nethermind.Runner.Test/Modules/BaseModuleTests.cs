@@ -26,17 +26,16 @@ public class BaseModuleTests
         IJsonSerializer jsonSerializer = new EthereumJsonSerializer();
         ILogManager logManager = Substitute.For<ILogManager>();
 
-        configProvider.GetConfig(typeof(IInitConfig)).Returns(new InitConfig());
+        configProvider.GetConfig<IInitConfig>().Returns(new InitConfig());
         logManager.GetClassLogger(typeof(TestClass)).Returns(LimboLogs.Instance.GetClassLogger<TestClass>());
 
         ContainerBuilder builder = new ContainerBuilder();
-        builder.RegisterModule(new BaseModule(
-            configProvider,
-            processExitSource,
-            chainSpec,
-            jsonSerializer,
-            logManager
-        ));
+        builder.RegisterInstance(configProvider);
+        builder.RegisterInstance(processExitSource);
+        builder.RegisterInstance(chainSpec);
+        builder.RegisterInstance(jsonSerializer);
+        builder.RegisterInstance(logManager);
+        builder.RegisterModule(new BaseModule());
 
         using IContainer container = builder.Build();
 
