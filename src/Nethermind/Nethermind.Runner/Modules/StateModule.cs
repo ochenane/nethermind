@@ -59,6 +59,7 @@ public class StateModule: Module
         {
             builder.RegisterType<WitnessCollector>()
                 .WithAttributeFiltering()
+                .AsSelf()
                 .As<IWitnessCollector>()
                 .SingleInstance();
             builder.Register<WitnessCollector, IBlockTree, ILogManager, IWitnessRepository>((wc, btree, log) => wc.WithPruning(btree, log))

@@ -27,7 +27,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
 
             ContainerBuilder containerBuilder = Build.BasicTestContainerBuilder();
             containerBuilder.RegisterInstance(jsonRpcConfig).As<IJsonRpcConfig>();
-            NethermindApi context = containerBuilder.Build().Resolve<NethermindApi>();
+            NethermindApi context = Build.ContextWithMocks(containerBuilder.Build());
 
             RegisterRpcModules registerRpcModules = new(context);
             await registerRpcModules.Execute(CancellationToken.None);

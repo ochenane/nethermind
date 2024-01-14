@@ -12,5 +12,8 @@ public enum ConfigNames
 {
     // Used by pruning trigger to determine which directory to watch
     FullPruningDbPath,
-    FullPruningThresholdMb
+    FullPruningThresholdMb,
+
+    // Used by testing. For skipping genesis in TestBlockchain
+    SkipLoadGenesis
 }

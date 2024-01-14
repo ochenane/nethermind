@@ -3,6 +3,7 @@
 
 using System.IO;
 using System.IO.Abstractions;
+using System.Net;
 using Autofac;
 using Nethermind.Api;
 using Nethermind.Blockchain;
@@ -74,12 +75,15 @@ namespace Nethermind.Runner.Test.Ethereum
             builder.RegisterModule(new KeyStoreModule());
 
             builder.RegisterInstance<IDbFactory>(new MemDbFactory());
+
             builder.RegisterInstance(new ProtectedPrivateKey(TestItem.PrivateKeyA, ""))
                 .Keyed<ProtectedPrivateKey>(PrivateKeyName.NodeKey)
                 .Keyed<ProtectedPrivateKey>(PrivateKeyName.SignerKey);
 
             builder.RegisterInstance(MainnetSpecProvider.Instance)
                 .As<ISpecProvider>();
+            builder.RegisterInstance(new Enode(TestItem.PublicKeyA, IPAddress.Any, 30303))
+                .As<IEnode>();
 
             return builder;
         }

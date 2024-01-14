@@ -507,6 +507,8 @@ public partial class EngineModuleTests
         using MergeTestBlockchain chain = await CreateBlockchain(Shanghai.Instance, containerMutator: (builder) =>
         {
             builder.RegisterInstance(blockTree).As<IBlockTree>();
+            builder.Register((ctx) => true)
+                .Keyed<bool>(ConfigNames.SkipLoadGenesis);
         });
 
         IEngineRpcModule rpc = CreateEngineModule(chain);
@@ -528,6 +530,8 @@ public partial class EngineModuleTests
         using MergeTestBlockchain chain = await CreateBlockchain(Shanghai.Instance, containerMutator: (builder) =>
         {
             builder.RegisterInstance(blockTree).As<IBlockTree>();
+            builder.Register((ctx) => true)
+                .Keyed<bool>(ConfigNames.SkipLoadGenesis);
         });
 
         IEngineRpcModule rpc = CreateEngineModule(chain);

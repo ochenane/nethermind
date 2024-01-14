@@ -103,15 +103,12 @@ public class TestBlockchain : IDisposable
     private IBlockFinder _blockFinder = null!;
 
     public static readonly UInt256 InitialValue = 1000.Ether();
-    private TrieStoreBoundaryWatcher _trieStoreWatcher = null!;
     public IHeaderValidator HeaderValidator { get; set; } = null!;
 
     private ReceiptCanonicalityMonitor? _canonicalityMonitor;
 
     public IBlockValidator BlockValidator { get; set; } = null!;
     public BuildBlocksWhenRequested BlockProductionTrigger { get; } = new();
-
-    public IReadOnlyTrieStore ReadOnlyTrieStore { get; private set; } = null!;
 
     public ManualTimestamper Timestamper { get; protected set; } = null!;
 
@@ -152,8 +149,6 @@ public class TestBlockchain : IDisposable
         State.Commit(SpecProvider.GenesisSpec);
         State.CommitTree(0);
 
-        ReadOnlyTrieStore = TrieStore.AsReadOnly(StateDb);
-
         TransactionComparerProvider = new TransactionComparerProvider(SpecProvider, BlockTree);
         TxPool = CreateTxPool();
 
@@ -161,8 +156,6 @@ public class TestBlockchain : IDisposable
             new ChainHeadInfoProvider(SpecProvider, BlockTree, StateReader);
 
         NonceManager = new NonceManager(chainHeadInfoProvider.AccountStateProvider);
-
-        _trieStoreWatcher = new TrieStoreBoundaryWatcher(WorldStateManager, BlockTree, LogManager);
 
         VirtualMachine virtualMachine = new(new BlockhashProvider(BlockTree, LogManager), SpecProvider, LogManager);
         TxProcessor = new TransactionProcessor(SpecProvider, State, virtualMachine, LogManager);
@@ -204,10 +197,12 @@ public class TestBlockchain : IDisposable
             _suggestedBlockResetEvent.Set();
         };
 
-        Block? genesis = GetGenesisBlock();
-        BlockTree.SuggestBlock(genesis);
-
-        await WaitAsync(_resetEvent, "Failed to process genesis in time.");
+        if (!Container.ResolveKeyed<bool>(ConfigNames.SkipLoadGenesis))
+        {
+            Block? genesis = GetGenesisBlock();
+            BlockTree.SuggestBlock(genesis);
+            await WaitAsync(_resetEvent, "Failed to process genesis in time.");
+        }
 
         if (addBlockOnStart)
             await AddBlocksOnStart();
@@ -405,8 +400,11 @@ public class TestBlockchain : IDisposable
     public virtual void Dispose()
     {
         BlockProducer?.StopAsync();
+<<<<<<< HEAD
         Container.Dispose();
         _trieStoreWatcher?.Dispose();
+=======
+>>>>>>> b8ab59f66b (Fix tests)
         Container.Dispose();
     }
 
