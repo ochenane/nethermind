@@ -18,7 +18,7 @@ public partial class Build
         builder.RegisterModule(new DatabaseModule());
         builder.RegisterModule(new CoreModule());
         builder.RegisterModule(new StateModule());
-        builder.Register((ctx) => false).Keyed<bool>(ConfigNames.SkipLoadGenesis);
+        builder.Register((ctx) => false).Keyed<bool>(ComponentKey.SkipLoadGenesis);
         return builder;
     }
 }

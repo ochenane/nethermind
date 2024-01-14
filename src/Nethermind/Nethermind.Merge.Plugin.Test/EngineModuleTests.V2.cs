@@ -508,7 +508,7 @@ public partial class EngineModuleTests
         {
             builder.RegisterInstance(blockTree).As<IBlockTree>();
             builder.Register((ctx) => true)
-                .Keyed<bool>(ConfigNames.SkipLoadGenesis);
+                .Keyed<bool>(ComponentKey.SkipLoadGenesis);
         });
 
         IEngineRpcModule rpc = CreateEngineModule(chain);
@@ -531,7 +531,7 @@ public partial class EngineModuleTests
         {
             builder.RegisterInstance(blockTree).As<IBlockTree>();
             builder.Register((ctx) => true)
-                .Keyed<bool>(ConfigNames.SkipLoadGenesis);
+                .Keyed<bool>(ComponentKey.SkipLoadGenesis);
         });
 
         IEngineRpcModule rpc = CreateEngineModule(chain);

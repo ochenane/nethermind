@@ -45,40 +45,40 @@ public class DatabaseModule : Module
         _diagnosticMode = DiagnosticMode.MemDb;
     }
 
-    private IDbFactory InitializeDbFactory(IComponentContext ctx)
-    {
-        IInitConfig initConfig;
-        switch (_diagnosticMode)
-        {
-            case DiagnosticMode.RpcDb:
-                initConfig = ctx.Resolve<IInitConfig>();
-                RocksDbFactory rocksDbFactory = ctx.Resolve<RocksDbFactory>(TypedParameter.From(Path.Combine(initConfig.BaseDbPath, "debug")));
-                return ctx.Resolve<RpcDbFactory>(
-                    TypedParameter.From<IDbFactory>(rocksDbFactory),
-                    TypedParameter.From<IJsonRpcClient>(
-                        ctx.Resolve<BasicJsonRpcClient>(
-                            TypedParameter.From(new Uri(initConfig.RpcDbUrl))
-                        )
-                    )
-                );
-            case DiagnosticMode.ReadOnlyDb:
-                initConfig = ctx.Resolve<IInitConfig>();
-                return ctx.Resolve<RocksDbFactory>(TypedParameter.From(Path.Combine(initConfig.BaseDbPath, "debug")));
-            case DiagnosticMode.MemDb:
-                return new MemDbFactory();
-            default:
-                initConfig = ctx.Resolve<IInitConfig>();
-                return ctx.Resolve<RocksDbFactory>(TypedParameter.From(initConfig.BaseDbPath));
-        }
-    }
-
     protected override void Load(ContainerBuilder builder)
     {
         base.Load(builder);
 
-        builder.Register<IComponentContext, IDbFactory>(InitializeDbFactory)
-            .SingleInstance();
+        switch (_diagnosticMode)
+        {
+            case DiagnosticMode.RpcDb:
+                builder.RegisterType<RocksDbFactory>()
+                    .WithParameter(GetParameter.FromType<IInitConfig>(ParameterKey.DbPath, initConfig => Path.Combine(initConfig.BaseDbPath, "debug")))
+                    .SingleInstance();
 
+                builder.Register(RpcDbFactoryFactory)
+                    .As<IDbFactory>()
+                    .SingleInstance();
+                break;
+            case DiagnosticMode.ReadOnlyDb:
+                builder.RegisterType<RocksDbFactory>()
+                    .WithParameter(GetParameter.FromType<IInitConfig>(ParameterKey.DbPath, initConfig => Path.Combine(initConfig.BaseDbPath, "debug")))
+                    .As<IDbFactory>()
+                    .SingleInstance();
+                break;
+            case DiagnosticMode.MemDb:
+                builder.RegisterImpl<MemDbFactory, IDbFactory>();
+                break;
+            default:
+                builder.RegisterType<RocksDbFactory>()
+                    .WithParameter(GetParameter.FromType<IInitConfig>(ParameterKey.DbPath, initConfig => initConfig.BaseDbPath))
+                    .As<IDbFactory>()
+                    .SingleInstance();
+                break;
+        }
+
+
+        // TODO: Move these to their respective module. They don't need to be in the same place anymore.
         RegisterDb(builder, DbNames.Blocks, () => Metrics.BlocksDbReads++, () => Metrics.BlocksDbWrites++);
         RegisterDb(builder, DbNames.Headers, () => Metrics.HeaderDbReads++, () => Metrics.HeaderDbWrites++);
         RegisterDb(builder, DbNames.BlockNumbers, () => Metrics.BlockNumberDbReads++, () => Metrics.BlockNumberDbWrites++);
@@ -169,5 +169,19 @@ public class DatabaseModule : Module
         }
 
         return new ReadOnlyDbProvider(dbProvider, _storeReceipts); // ToDo storeReceipts as createInMemoryWriteStore - bug?
+    }
+
+    private RpcDbFactory RpcDbFactoryFactory(IComponentContext ctx)
+    {
+        var rocksDbFactory = ctx.Resolve<RocksDbFactory>();
+        var initConfig = ctx.Resolve<IInitConfig>();
+        return ctx.Resolve<RpcDbFactory>(
+            TypedParameter.From<IDbFactory>(rocksDbFactory),
+            TypedParameter.From<IJsonRpcClient>(
+                ctx.Resolve<BasicJsonRpcClient>(
+                    TypedParameter.From(new Uri(initConfig.RpcDbUrl))
+                )
+            )
+        );
     }
 }

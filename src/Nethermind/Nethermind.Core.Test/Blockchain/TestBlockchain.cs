@@ -197,7 +197,7 @@ public class TestBlockchain : IDisposable
             _suggestedBlockResetEvent.Set();
         };
 
-        if (!Container.ResolveKeyed<bool>(ConfigNames.SkipLoadGenesis))
+        if (!Container.ResolveKeyed<bool>(ComponentKey.SkipLoadGenesis))
         {
             Block? genesis = GetGenesisBlock();
             BlockTree.SuggestBlock(genesis);

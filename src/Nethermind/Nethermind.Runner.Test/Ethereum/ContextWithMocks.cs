@@ -74,11 +74,9 @@ namespace Nethermind.Runner.Test.Ethereum
             builder.RegisterModule(new NetworkModule());
             builder.RegisterModule(new KeyStoreModule());
 
-            builder.RegisterInstance<IDbFactory>(new MemDbFactory());
-
             builder.RegisterInstance(new ProtectedPrivateKey(TestItem.PrivateKeyA, ""))
-                .Keyed<ProtectedPrivateKey>(PrivateKeyName.NodeKey)
-                .Keyed<ProtectedPrivateKey>(PrivateKeyName.SignerKey);
+                .Keyed<ProtectedPrivateKey>(ComponentKey.NodeKey)
+                .Keyed<ProtectedPrivateKey>(ComponentKey.SignerKey);
 
             builder.RegisterInstance(MainnetSpecProvider.Instance)
                 .As<ISpecProvider>();

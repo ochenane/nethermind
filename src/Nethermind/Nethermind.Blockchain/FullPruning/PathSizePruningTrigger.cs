@@ -35,7 +35,7 @@ namespace Nethermind.Blockchain.FullPruning
         /// <param name="timerFactory">Factory for timers.</param>
         /// <param name="fileSystem">File system access.</param>
         /// <exception cref="ArgumentException">Thrown if <see cref="path"/> doesn't exist.</exception>
-        public PathSizePruningTrigger([KeyFilter(ConfigNames.FullPruningDbPath)] string path, [KeyFilter(ConfigNames.FullPruningThresholdMb)] long threshold, ITimerFactory timerFactory, IFileSystem fileSystem)
+        public PathSizePruningTrigger([KeyFilter(ComponentKey.FullPruningDbPath)] string path, [KeyFilter(ComponentKey.FullPruningThresholdMb)] long threshold, ITimerFactory timerFactory, IFileSystem fileSystem)
         {
             if (!fileSystem.Directory.Exists(path))
             {

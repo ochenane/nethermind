@@ -24,7 +24,7 @@ namespace Nethermind.Consensus
 
         public bool CanSign => _key is not null;
 
-        public Signer(ISpecProvider specProvider, [KeyFilter(PrivateKeyName.SignerKey)] ProtectedPrivateKey key, ILogger logger)
+        public Signer(ISpecProvider specProvider, [KeyFilter(ComponentKey.SignerKey)] ProtectedPrivateKey key, ILogger logger)
             : this(specProvider.ChainId, key, logger)
         {
         }

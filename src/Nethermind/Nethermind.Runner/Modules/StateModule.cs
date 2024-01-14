@@ -123,7 +123,7 @@ public class StateModule: Module
         builder.RegisterType<WorldState>()
             .WithAttributeFiltering()
             .SingleInstance()
-            .As<IWorldState>();
+            .Keyed<IWorldState>(ComponentKey.MainWorldState);
 
         if (_trieHealingEnabled)
         {
@@ -138,6 +138,7 @@ public class StateModule: Module
         }
 
         builder.RegisterType<WorldStateManager>()
+            .WithAttributeFiltering()
             .SingleInstance()
             .As<IWorldStateManager>();
 
@@ -152,9 +153,9 @@ public class StateModule: Module
     private void ConfigureFullPruning(ContainerBuilder builder)
     {
         builder.Register<IFullPruningDb, IInitConfig, string>((db, cfg) => db.GetPath(cfg.BaseDbPath))
-            .Keyed<string>(ConfigNames.FullPruningDbPath);
+            .Keyed<string>(ComponentKey.FullPruningDbPath);
         builder.Register<IPruningConfig, long>(conf => conf.FullPruningThresholdMb.MB())
-            .Keyed<long>(ConfigNames.FullPruningThresholdMb);
+            .Keyed<long>(ComponentKey.FullPruningThresholdMb);
 
         switch (_fullPruningTrigger)
         {
@@ -170,7 +171,7 @@ public class StateModule: Module
         builder.RegisterComposite<CompositePruningTrigger, IPruningTrigger>();
 
         builder.Register<IComponentContext, IDriveInfo>((fs) =>
-            fs.Resolve<IFileSystem>().GetDriveInfos(fs.ResolveKeyed<string>(ConfigNames.FullPruningDbPath)).FirstOrDefault());
+            fs.Resolve<IFileSystem>().GetDriveInfos(fs.ResolveKeyed<string>(ComponentKey.FullPruningDbPath)).FirstOrDefault());
         builder.Register<ChainSpec, IChainEstimations>((cs) => ChainSizes.CreateChainSizeInfo(cs.ChainId));
     }
 }
