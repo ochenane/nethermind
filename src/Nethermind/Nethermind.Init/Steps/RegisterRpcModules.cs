@@ -48,7 +48,6 @@ public class RegisterRpcModules : IStep
     {
         if (_api.BlockTree is null) throw new StepDependencyException(nameof(_api.BlockTree));
         if (_api.ReceiptFinder is null) throw new StepDependencyException(nameof(_api.ReceiptFinder));
-        if (_api.BloomStorage is null) throw new StepDependencyException(nameof(_api.BloomStorage));
         if (_api.LogManager is null) throw new StepDependencyException(nameof(_api.LogManager));
 
         IJsonRpcConfig jsonRpcConfig = _api.Config<IJsonRpcConfig>();

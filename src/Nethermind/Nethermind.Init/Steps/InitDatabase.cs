@@ -6,15 +6,6 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Nethermind.Api;
-using Nethermind.Blockchain.Synchronization;
-using Nethermind.Db;
-using Nethermind.Db.Rocks;
-using Nethermind.Db.Rocks.Config;
-using Nethermind.Db.Rpc;
-using Nethermind.JsonRpc.Client;
-using Nethermind.Logging;
-using Nethermind.TxPool;
 
 namespace Nethermind.Init.Steps
 {
