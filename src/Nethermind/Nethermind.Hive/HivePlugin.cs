@@ -13,7 +13,7 @@ namespace Nethermind.Hive
     public class HivePlugin : INethermindPlugin
     {
         private INethermindApi _api = null!;
-        private ILogger _logger = null!;
+        private ILogger _logger;
         private readonly CancellationTokenSource _disposeCancellationToken = new();
 
         public ValueTask DisposeAsync()
