@@ -14,6 +14,7 @@ using Autofac.Features.AttributeFilters;
 using Nethermind.Api;
 using Nethermind.Blockchain.Synchronization;
 using Nethermind.Config;
+using Nethermind.Core;
 using Nethermind.Db;
 using Nethermind.Db.FullPruning;
 using Nethermind.Db.Rocks;
@@ -94,15 +95,18 @@ public class DatabaseModule : Module
         // Note: this is lazy
         RegisterColumnsDb<BlobTxsColumns>(builder, DbNames.BlobTransactions, () => Metrics.BlobTransactionsDbReads++, () => Metrics.BlobTransactionsDbWrites++);
 
-        builder.Register<IDbFactory, IFileSystem, IDb>(StateDbFactory)
-            .Named<IDb>(DbNames.State)
+        builder.Register<IDbFactory, IFileSystem, FullPruningDb>(StateDbFactory)
+            .Keyed<IDb>(DbNames.State)
+            .Keyed<IKeyValueStore>(DbNames.State)
+            .Keyed<IKeyValueStoreWithBatching>(DbNames.State)
+            .As<IFullPruningDb>()
             .SingleInstance();
 
         builder.Register<IFileSystem, IDbProvider>(InitDbProvider)
             .SingleInstance();
     }
 
-    private static IDb StateDbFactory(IDbFactory dbFactory, IFileSystem fileSystem)
+    private static FullPruningDb StateDbFactory(IDbFactory dbFactory, IFileSystem fileSystem)
     {
         DbSettings stateDbSettings = BuildDbSettings(DbNames.State, () => Metrics.StateDbReads++, () => Metrics.StateDbWrites++);
         return new FullPruningDb(
@@ -116,7 +120,9 @@ public class DatabaseModule : Module
     private static void RegisterDb(ContainerBuilder builder, string dbName, Action updateReadsMetrics, Action updateWriteMetrics)
     {
         builder.Register<IDbFactory, IDb>((dbFactory) => dbFactory.CreateDb(BuildDbSettings(dbName, updateReadsMetrics, updateWriteMetrics)))
-            .Named<IDb>(dbName)
+            .Keyed<IDb>(dbName)
+            .Keyed<IKeyValueStoreWithBatching>(dbName)
+            .Keyed<IKeyValueStore>(dbName)
             .SingleInstance();
     }
 

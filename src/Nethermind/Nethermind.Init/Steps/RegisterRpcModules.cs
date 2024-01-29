@@ -167,8 +167,7 @@ public class RegisterRpcModules : IStep
         if (_api.StaticNodesManager is null) throw new StepDependencyException(nameof(_api.StaticNodesManager));
         if (_api.Enode is null) throw new StepDependencyException(nameof(_api.Enode));
 
-        ManualPruningTrigger pruningTrigger = new();
-        _api.PruningTrigger.Add(pruningTrigger);
+        ManualPruningTrigger pruningTrigger = _api.BaseContainer.Resolve<ManualPruningTrigger>();
         AdminRpcModule adminRpcModule = new(
             _api.BlockTree,
             networkConfig,

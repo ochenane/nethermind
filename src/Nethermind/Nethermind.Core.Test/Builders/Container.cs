@@ -17,6 +17,7 @@ public partial class Build
         builder.RegisterModule(new BaseModule());
         builder.RegisterModule(new DatabaseModule());
         builder.RegisterModule(new CoreModule());
+        builder.RegisterModule(new StateModule());
         return builder;
     }
 }

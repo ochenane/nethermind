@@ -57,19 +57,19 @@ namespace Nethermind.Api
         /// <remarks>
         /// DO NOT USE OUTSIDE OF PROCESSING BLOCK CONTEXT!
         /// </remarks>
-        IWorldState? WorldState { get; set; }
-        IReadOnlyStateProvider? ChainHeadStateProvider { get; set; }
-        IStateReader? StateReader { get; set; }
-        IWorldStateManager? WorldStateManager { get; set; }
+        IWorldState? WorldState { get; }
+        IReadOnlyStateProvider? ChainHeadStateProvider { get; }
+        IStateReader? StateReader { get; }
+        IWorldStateManager? WorldStateManager { get; }
         ITransactionProcessor? TransactionProcessor { get; set; }
-        ITrieStore? TrieStore { get; set; }
+        ITrieStore? TrieStore { get; }
         ITxSender? TxSender { get; set; }
         INonceManager? NonceManager { get; set; }
         ITxPool? TxPool { get; set; }
         ITxPoolInfoProvider? TxPoolInfoProvider { get; set; }
         CompositeTxGossipPolicy TxGossipPolicy { get; }
-        IWitnessCollector? WitnessCollector { get; set; }
-        IWitnessRepository? WitnessRepository { get; set; }
+        IWitnessCollector? WitnessCollector { get; }
+        IWitnessRepository? WitnessRepository { get; }
         IHealthHintService? HealthHintService { get; set; }
         IRpcCapabilitiesProvider? RpcCapabilitiesProvider { get; set; }
         ITransactionComparerProvider? TransactionComparerProvider { get; set; }
@@ -90,8 +90,6 @@ namespace Nethermind.Api
         IGasPriceOracle? GasPriceOracle { get; set; }
 
         IEthSyncingInfo? EthSyncingInfo { get; set; }
-
-        CompositePruningTrigger PruningTrigger { get; }
 
         IBlockProductionPolicy? BlockProductionPolicy { get; set; }
     }

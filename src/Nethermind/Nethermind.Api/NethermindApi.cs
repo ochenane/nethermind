@@ -135,9 +135,9 @@ namespace Nethermind.Api
         public IPeerPool? PeerPool { get; set; }
         public IProtocolsManager? ProtocolsManager { get; set; }
         public IProtocolValidator? ProtocolValidator { get; set; }
-        public IReceiptStorage? ReceiptStorage => BaseContainer.Resolve<IReceiptStorage>();
-        public IWitnessCollector? WitnessCollector { get; set; }
-        public IWitnessRepository? WitnessRepository { get; set; }
+        public IReceiptStorage ReceiptStorage => BaseContainer.Resolve<IReceiptStorage>();
+        public IWitnessCollector WitnessCollector => BaseContainer.Resolve<IWitnessCollector>();
+        public IWitnessRepository WitnessRepository => BaseContainer.Resolve<IWitnessRepository>();
         public IReceiptFinder? ReceiptFinder => BaseContainer.Resolve<IReceiptFinder>();
         public IReceiptMonitor? ReceiptMonitor { get; set; }
         public IRewardCalculatorSource? RewardCalculatorSource { get; set; } = NoBlockRewards.Instance;
@@ -174,15 +174,15 @@ namespace Nethermind.Api
         public IPeerDifficultyRefreshPool? PeerDifficultyRefreshPool { get; set; }
         public ISynchronizer? Synchronizer { get; set; }
         public ISyncServer? SyncServer { get; set; }
-        public IWorldState? WorldState { get; set; }
-        public IReadOnlyStateProvider? ChainHeadStateProvider { get; set; }
-        public IWorldStateManager? WorldStateManager { get; set; }
-        public IStateReader? StateReader { get; set; }
+        public IWorldState? WorldState => WorldStateManager.GlobalWorldState;
+        public IReadOnlyStateProvider? ChainHeadStateProvider => BaseContainer.Resolve<IReadOnlyStateProvider>();
+        public IWorldStateManager WorldStateManager => BaseContainer.Resolve<IWorldStateManager>();
+        public IStateReader? StateReader => WorldStateManager.GlobalStateReader;
         public IStaticNodesManager? StaticNodesManager { get; set; }
         public ITimestamper Timestamper => BaseContainer.Resolve<ITimestamper>();
         public ITimerFactory TimerFactory => BaseContainer.Resolve<ITimerFactory>();
         public ITransactionProcessor? TransactionProcessor { get; set; }
-        public ITrieStore? TrieStore { get; set; }
+        public ITrieStore TrieStore => BaseContainer.Resolve<ITrieStore>();
         public ITxSender? TxSender { get; set; }
         public INonceManager? NonceManager { get; set; }
         public ITxPool? TxPool { get; set; }
@@ -211,7 +211,6 @@ namespace Nethermind.Api
         public DisposableStack DisposeStack { get; } = new();
         public IReadOnlyList<INethermindPlugin> Plugins => BaseContainer.Resolve<IReadOnlyList<INethermindPlugin>>();
         public IList<IPublisher> Publishers { get; } = new List<IPublisher>(); // this should be called publishers
-        public CompositePruningTrigger PruningTrigger { get; } = new();
         public IProcessExitSource ProcessExit => BaseContainer.Resolve<IProcessExitSource>();
         public CompositeTxGossipPolicy TxGossipPolicy { get; } = new();
 

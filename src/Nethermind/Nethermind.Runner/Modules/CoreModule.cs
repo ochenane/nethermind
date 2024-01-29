@@ -18,6 +18,7 @@ using Nethermind.Core.Specs;
 using Nethermind.Crypto;
 using Nethermind.Db;
 using Nethermind.Db.Blooms;
+using Nethermind.Logging;
 using Nethermind.Serialization.Rlp;
 using Nethermind.State.Repositories;
 using Nethermind.TxPool;
@@ -103,6 +104,7 @@ public class CoreModule : Module
         builder.RegisterType<BlockTree>()
             .WithAttributeFiltering()
             .As<IBlockTree>()
+            .As<IBlockFinder>()
             .SingleInstance();
 
         ConfigureSigner(builder);
@@ -114,6 +116,7 @@ public class CoreModule : Module
         if (_isMining)
         {
             builder.RegisterType<Signer>()
+                .WithAttributeFiltering()
                 .As<ISignerStore>()
                 .As<ISigner>()
                 .SingleInstance();

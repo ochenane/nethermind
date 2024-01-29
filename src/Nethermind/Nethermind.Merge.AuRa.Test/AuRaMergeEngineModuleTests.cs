@@ -117,7 +117,6 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
         protected override IBlockProcessor CreateBlockProcessor()
         {
             _api = Container.Resolve<AuRaNethermindApi>();
-            _api.WorldStateManager = WorldStateManager;
             _api.TransactionComparerProvider = TransactionComparerProvider;
             _api.TxPool = TxPool;
 

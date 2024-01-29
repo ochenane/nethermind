@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Threading;
 using Nethermind.Core;
 using Nethermind.Core.Crypto;
+using Nethermind.Db.FullPruning;
 
 namespace Nethermind.Trie.Pruning
 {
@@ -38,6 +40,10 @@ namespace Nethermind.Trie.Pruning
         public void Dispose() { }
 
         public void Set(in ValueHash256 hash, byte[] rlp)
+        {
+        }
+
+        public void PersistCache(IKeyValueStore kv, CancellationToken token)
         {
         }
     }

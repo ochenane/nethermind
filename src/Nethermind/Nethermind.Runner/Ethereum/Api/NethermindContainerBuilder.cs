@@ -64,6 +64,7 @@ namespace Nethermind.Runner.Ethereum.Api
             containerBuilder.RegisterModule(new BaseModule());
             containerBuilder.RegisterModule(new CoreModule(_configProvider));
             containerBuilder.RegisterModule(new DatabaseModule(_configProvider));
+            containerBuilder.RegisterModule(new StateModule(_configProvider));
             containerBuilder.RegisterModule(new NetworkModule());
             containerBuilder.RegisterModule(new KeyStoreModule());
             containerBuilder.RegisterModule(new StepModule());

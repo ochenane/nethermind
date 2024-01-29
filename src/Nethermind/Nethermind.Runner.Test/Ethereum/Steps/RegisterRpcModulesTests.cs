@@ -4,6 +4,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
 using FluentAssertions;
 using Nethermind.Api;
 using Nethermind.Init.Steps;
@@ -24,8 +25,9 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         {
             JsonRpcConfig jsonRpcConfig = new() { Enabled = true };
 
-            NethermindApi context = Build.ContextWithMocks();
-            context.ConfigProvider.GetConfig<IJsonRpcConfig>().Returns(jsonRpcConfig);
+            ContainerBuilder containerBuilder = Build.BasicTestContainerBuilder();
+            containerBuilder.RegisterInstance(jsonRpcConfig).As<IJsonRpcConfig>();
+            NethermindApi context = containerBuilder.Build().Resolve<NethermindApi>();
 
             RegisterRpcModules registerRpcModules = new(context);
             await registerRpcModules.Execute(CancellationToken.None);

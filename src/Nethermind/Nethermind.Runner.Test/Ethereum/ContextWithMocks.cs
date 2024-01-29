@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2022 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
+using System.IO;
 using System.IO.Abstractions;
 using Autofac;
 using Nethermind.Api;
@@ -46,6 +47,7 @@ using Nethermind.Specs;
 using NSubstitute;
 using Nethermind.Blockchain.Blocks;
 using Nethermind.Core;
+using Nethermind.Core.Test.Builders;
 using Nethermind.Core.Timers;
 using Nethermind.Runner.Modules;
 
@@ -65,9 +67,16 @@ namespace Nethermind.Runner.Test.Ethereum
             builder.RegisterInstance(new ChainSpec());
 
             builder.RegisterModule(new BaseModule());
-            builder.RegisterModule(new DatabaseModule(configProvider));
+            builder.RegisterModule(new CoreModule());
+            builder.RegisterModule(new StateModule());
+            builder.RegisterModule(new DatabaseModule());
             builder.RegisterModule(new NetworkModule());
+            builder.RegisterModule(new KeyStoreModule());
+
             builder.RegisterInstance<IDbFactory>(new MemDbFactory());
+            builder.RegisterInstance(new ProtectedPrivateKey(TestItem.PrivateKeyA, ""))
+                .Keyed<ProtectedPrivateKey>(PrivateKeyName.NodeKey)
+                .Keyed<ProtectedPrivateKey>(PrivateKeyName.SignerKey);
 
             builder.RegisterInstance(MainnetSpecProvider.Instance)
                 .As<ISpecProvider>();
@@ -93,7 +102,7 @@ namespace Nethermind.Runner.Test.Ethereum
                 containerBuilder.RegisterInstance(Substitute.For<IKeyStore>()).As<IKeyStore>();
                 containerBuilder.RegisterInstance(Substitute.For<IEnode>()).As<IEnode>();
                 containerBuilder.RegisterInstance(Substitute.For<IDbProvider>()).As<IDbProvider>();
-                containerBuilder.RegisterInstance(Substitute.For<BlockTree>()).As<IBlockTree>();
+                containerBuilder.RegisterInstance(Substitute.For<IBlockTree>()).As<IBlockTree>();
                 containerBuilder.RegisterInstance(Substitute.For<IBloomStorage>()).As<IBloomStorage>();
                 containerBuilder.RegisterInstance(Substitute.For<IReceiptStorage>()).As<IReceiptStorage>();
                 containerBuilder.RegisterInstance(Substitute.For<IReceiptFinder>()).As<IReceiptFinder>();
@@ -103,6 +112,12 @@ namespace Nethermind.Runner.Test.Ethereum
                 containerBuilder.RegisterInstance(Substitute.For<IChainLevelInfoRepository>()).As<IChainLevelInfoRepository>();
                 containerBuilder.RegisterInstance(Substitute.For<IBlockStore>()).As<IBlockStore>();
                 containerBuilder.RegisterInstance(Substitute.For<IEthereumEcdsa>()).As<IEthereumEcdsa>();
+                containerBuilder.RegisterInstance(Substitute.For<IWorldState>()).As<IWorldState>();
+                containerBuilder.RegisterInstance(Substitute.For<IStateReader>()).As<IStateReader>();
+                containerBuilder.RegisterInstance(Substitute.For<ITrieStore>()).As<ITrieStore>();
+                containerBuilder.RegisterInstance(Substitute.For<IWitnessRepository>()).As<IWitnessRepository>();
+                containerBuilder.RegisterInstance(Substitute.For<IWorldStateManager>()).As<IWorldStateManager>();
+                containerBuilder.RegisterInstance(Substitute.For<IReadOnlyStateProvider>()).As<IReadOnlyStateProvider>();
                 containerBuilder.RegisterInstance(new ChainSpec());
                 container = containerBuilder.Build();
             }
@@ -133,8 +148,6 @@ namespace Nethermind.Runner.Test.Ethereum
                 RlpxPeer = Substitute.For<IRlpxHost>(),
                 SealValidator = Substitute.For<ISealValidator>(),
                 SessionMonitor = Substitute.For<ISessionMonitor>(),
-                WorldState = Substitute.For<IWorldState>(),
-                StateReader = Substitute.For<IStateReader>(),
                 TransactionProcessor = Substitute.For<ITransactionProcessor>(),
                 TxSender = Substitute.For<ITxSender>(),
                 BlockProcessingQueue = Substitute.For<IBlockProcessingQueue>(),
@@ -143,7 +156,6 @@ namespace Nethermind.Runner.Test.Ethereum
                 SyncPeerPool = Substitute.For<ISyncPeerPool>(),
                 PeerDifficultyRefreshPool = Substitute.For<IPeerDifficultyRefreshPool>(),
                 WebSocketsManager = Substitute.For<IWebSocketsManager>(),
-                TrieStore = Substitute.For<ITrieStore>(),
                 BlockProducerEnvFactory = Substitute.For<IBlockProducerEnvFactory>(),
                 TransactionComparerProvider = Substitute.For<ITransactionComparerProvider>(),
                 GasPriceOracle = Substitute.For<IGasPriceOracle>(),
@@ -155,10 +167,7 @@ namespace Nethermind.Runner.Test.Ethereum
                 SyncProgressResolver = Substitute.For<ISyncProgressResolver>(),
                 BetterPeerStrategy = Substitute.For<IBetterPeerStrategy>(),
                 ReceiptMonitor = Substitute.For<IReceiptMonitor>(),
-                WitnessRepository = Substitute.For<IWitnessRepository>(),
             };
-
-            api.WorldStateManager = new ReadOnlyWorldStateManager(api.DbProvider, Substitute.For<IReadOnlyTrieStore>(), LimboLogs.Instance);
             return api;
         }
     }
