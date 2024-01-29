@@ -101,19 +101,18 @@ namespace Nethermind.Api
         public IBlockProcessingQueue? BlockProcessingQueue { get; set; }
         public IBlockProcessor? MainBlockProcessor { get; set; }
         public IBlockProducer? BlockProducer { get; set; }
-        public IBlockTree? BlockTree { get; set; }
+        public IBlockTree BlockTree => BaseContainer.Resolve<IBlockTree>();
         public IBlockValidator? BlockValidator { get; set; }
-        public IBloomStorage? BloomStorage { get; set; }
-        public IChainLevelInfoRepository? ChainLevelInfoRepository { get; set; }
+        public IBloomStorage? BloomStorage => BaseContainer.Resolve<IBloomStorage>();
+        public IChainLevelInfoRepository ChainLevelInfoRepository => BaseContainer.Resolve<IChainLevelInfoRepository>();
         public IConfigProvider ConfigProvider => BaseContainer.Resolve<IConfigProvider>();
         public ICryptoRandom CryptoRandom => BaseContainer.Resolve<ICryptoRandom>();
         public IDbProvider DbProvider => BaseContainer.Resolve<IDbProvider>();
         public IDisconnectsAnalyzer? DisconnectsAnalyzer { get; set; }
         public IDiscoveryApp? DiscoveryApp { get; set; }
-        public ISigner? EngineSigner { get; set; }
-        public ISignerStore? EngineSignerStore { get; set; }
+        public ISigner? EngineSigner => BaseContainer.Resolve<ISigner>();
         public IEnode? Enode => BaseContainer.Resolve<IEnode>();
-        public IEthereumEcdsa? EthereumEcdsa { get; set; }
+        public IEthereumEcdsa EthereumEcdsa => BaseContainer.Resolve<IEthereumEcdsa>();
         public IFileSystem FileSystem => BaseContainer.Resolve<IFileSystem>();
         public IFilterStore? FilterStore { get; set; }
         public IFilterManager? FilterManager { get; set; }
@@ -126,7 +125,7 @@ namespace Nethermind.Api
 
         public IJsonSerializer EthereumJsonSerializer => BaseContainer.Resolve<IJsonSerializer>();
         public IKeyStore KeyStore => BaseContainer.Resolve<IKeyStore>();
-        public ILogFinder? LogFinder { get; set; }
+        public ILogFinder? LogFinder => BaseContainer.Resolve<ILogFinder>();
         public ILogManager LogManager => BaseContainer.Resolve<ILogManager>();
         public IMessageSerializationService MessageSerializationService { get; } = new MessageSerializationService();
         public IGossipPolicy GossipPolicy { get; set; } = Policy.FullGossip;
@@ -136,10 +135,10 @@ namespace Nethermind.Api
         public IPeerPool? PeerPool { get; set; }
         public IProtocolsManager? ProtocolsManager { get; set; }
         public IProtocolValidator? ProtocolValidator { get; set; }
-        public IReceiptStorage? ReceiptStorage { get; set; }
+        public IReceiptStorage? ReceiptStorage => BaseContainer.Resolve<IReceiptStorage>();
         public IWitnessCollector? WitnessCollector { get; set; }
         public IWitnessRepository? WitnessRepository { get; set; }
-        public IReceiptFinder? ReceiptFinder { get; set; }
+        public IReceiptFinder? ReceiptFinder => BaseContainer.Resolve<IReceiptFinder>();
         public IReceiptMonitor? ReceiptMonitor { get; set; }
         public IRewardCalculatorSource? RewardCalculatorSource { get; set; } = NoBlockRewards.Instance;
         public IRlpxHost? RlpxPeer { get; set; }
@@ -199,7 +198,7 @@ namespace Nethermind.Api
         public IEthSyncingInfo? EthSyncingInfo { get; set; }
         public IBlockProductionPolicy? BlockProductionPolicy { get; set; }
         public IWallet Wallet => BaseContainer.Resolve<IWallet>();
-        public IBlockStore? BadBlocksStore { get; set; }
+        public IBlockStore? BadBlocksStore => BaseContainer.ResolveKeyed<IBlockStore>(IBlockStore.Key.BadBlock);
         public ITransactionComparerProvider? TransactionComparerProvider { get; set; }
         public IWebSocketsManager WebSocketsManager { get; set; } = new WebSocketsManager();
 

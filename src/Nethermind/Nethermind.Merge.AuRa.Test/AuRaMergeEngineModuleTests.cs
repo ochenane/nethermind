@@ -45,8 +45,8 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
     protected override MergeTestBlockchain CreateBaseBlockchain(
         IMergeConfig? mergeConfig = null,
         IPayloadPreparationService? mockedPayloadService = null,
-        ILogManager? logManager = null)
-        => new MergeAuRaTestBlockchain(mergeConfig, mockedPayloadService);
+        Action<ContainerBuilder>? containerMutator = null)
+        => new MergeAuRaTestBlockchain(mergeConfig, mockedPayloadService, containerMutator: containerMutator);
 
     protected override Hash256 ExpectedBlockHash => new("0x990d377b67dbffee4a60db6f189ae479ffb406e8abea16af55e0469b8524cf46");
 
@@ -93,8 +93,8 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
     {
         private AuRaNethermindApi? _api;
 
-        public MergeAuRaTestBlockchain(IMergeConfig? mergeConfig = null, IPayloadPreparationService? mockedPayloadPreparationService = null)
-            : base(mergeConfig, mockedPayloadPreparationService)
+        public MergeAuRaTestBlockchain(IMergeConfig? mergeConfig = null, IPayloadPreparationService? mockedPayloadPreparationService = null, Action<ContainerBuilder>? containerMutator = null)
+            : base(mergeConfig, mockedPayloadPreparationService, containerMutator: containerMutator)
         {
         }
 
@@ -117,7 +117,6 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
         protected override IBlockProcessor CreateBlockProcessor()
         {
             _api = Container.Resolve<AuRaNethermindApi>();
-            _api.BlockTree = BlockTree;
             _api.WorldStateManager = WorldStateManager;
             _api.TransactionComparerProvider = TransactionComparerProvider;
             _api.TxPool = TxPool;

@@ -29,7 +29,7 @@ namespace Nethermind.Api
         IConfigProvider ConfigProvider { get; }
         ICryptoRandom CryptoRandom { get; }
         IDbProvider? DbProvider { get; }
-        IEthereumEcdsa? EthereumEcdsa { get; set; }
+        IEthereumEcdsa? EthereumEcdsa { get; }
         IJsonSerializer EthereumJsonSerializer { get; }
         IFileSystem FileSystem { get; }
         IKeyStore KeyStore { get; }

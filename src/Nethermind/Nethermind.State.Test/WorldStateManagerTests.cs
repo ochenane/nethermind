@@ -3,12 +3,8 @@
 
 using System;
 using FluentAssertions;
-using Nethermind.Core;
-using Nethermind.Core.Crypto;
-using Nethermind.Core.Test.Modules;
 using Nethermind.Db;
 using Nethermind.Logging;
-using Nethermind.Specs;
 using Nethermind.State;
 using Nethermind.Trie.Pruning;
 using NSubstitute;

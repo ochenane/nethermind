@@ -17,16 +17,15 @@ namespace Nethermind.Api
     public interface IApiWithStores : IBasicApi
     {
         IBlobTxStorage? BlobTxStorage { get; }
-        IBlockTree? BlockTree { get; set; }
-        IBloomStorage? BloomStorage { get; set; }
-        IChainLevelInfoRepository? ChainLevelInfoRepository { get; set; }
-        ILogFinder? LogFinder { get; set; }
-        ISigner? EngineSigner { get; set; }
-        ISignerStore? EngineSignerStore { get; set; }
-        IReceiptStorage? ReceiptStorage { get; set; }
-        IReceiptFinder? ReceiptFinder { get; set; }
+        IBlockTree? BlockTree { get; }
+        IBloomStorage? BloomStorage { get; }
+        IChainLevelInfoRepository? ChainLevelInfoRepository { get; }
+        ILogFinder? LogFinder { get; }
+        ISigner? EngineSigner { get; }
+        IReceiptStorage? ReceiptStorage { get; }
+        IReceiptFinder? ReceiptFinder { get; }
         IReceiptMonitor? ReceiptMonitor { get; set; }
         IWallet Wallet { get; }
-        IBlockStore? BadBlocksStore { get; set; }
+        IBlockStore? BadBlocksStore { get; }
     }
 }

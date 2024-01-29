@@ -66,7 +66,7 @@ public class TestBlockchain : IDisposable
     public IBlockPreprocessorStep BlockPreprocessorStep { get; set; } = null!;
 
     public IBlockProcessingQueue BlockProcessingQueue { get; set; } = null!;
-    public IBlockTree BlockTree { get; set; } = null!;
+    public IBlockTree BlockTree => Container.Resolve<IBlockTree>();
 
     public Action<IWorldState>? InitialStateMutator { get; set; }
 
@@ -131,8 +131,6 @@ public class TestBlockchain : IDisposable
 
         ContainerBuilder builder = Builders.Build.A.BasicTestContainerBuilder();
         builder.RegisterInstance(configProvider);
-        builder.RegisterModule(new BaseModule());
-        builder.RegisterModule(new DatabaseModule(storeReceipts: true, diagnosticMode: DiagnosticMode.MemDb));
         builder.RegisterInstance(CreateSpecProvider(specProvider ?? MainnetSpecProvider.Instance));
         builder.RegisterInstance(Timestamper).AsImplementedInterfaces();
         ConfigureContainer(builder);
@@ -166,11 +164,6 @@ public class TestBlockchain : IDisposable
         ReadOnlyTrieStore = TrieStore.AsReadOnly(StateDb);
         WorldStateManager = new WorldStateManager(State, TrieStore, DbProvider, LimboLogs.Instance);
         StateReader = new StateReader(ReadOnlyTrieStore, CodeDb, LogManager);
-
-        BlockTree = Builders.Build.A.BlockTree()
-            .WithSpecProvider(SpecProvider)
-            .WithoutSettingHead
-            .TestObject;
 
         ReadOnlyState = new ChainHeadReadOnlyStateProvider(BlockTree, StateReader);
         TransactionComparerProvider = new TransactionComparerProvider(SpecProvider, BlockTree);

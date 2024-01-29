@@ -59,7 +59,7 @@ namespace Nethermind.Init.Steps.Migrations
             api.ChainLevelInfoRepository!,
             api.Config<IReceiptConfig>(),
             api.DbProvider?.ReceiptsDb!,
-            new ReceiptsRecovery(api.EthereumEcdsa, api.SpecProvider),
+            new ReceiptsRecovery(api.EthereumEcdsa!, api.SpecProvider!),
             api.LogManager
         )
         {

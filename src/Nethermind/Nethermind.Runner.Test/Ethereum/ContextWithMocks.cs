@@ -93,6 +93,16 @@ namespace Nethermind.Runner.Test.Ethereum
                 containerBuilder.RegisterInstance(Substitute.For<IKeyStore>()).As<IKeyStore>();
                 containerBuilder.RegisterInstance(Substitute.For<IEnode>()).As<IEnode>();
                 containerBuilder.RegisterInstance(Substitute.For<IDbProvider>()).As<IDbProvider>();
+                containerBuilder.RegisterInstance(Substitute.For<BlockTree>()).As<IBlockTree>();
+                containerBuilder.RegisterInstance(Substitute.For<IBloomStorage>()).As<IBloomStorage>();
+                containerBuilder.RegisterInstance(Substitute.For<IReceiptStorage>()).As<IReceiptStorage>();
+                containerBuilder.RegisterInstance(Substitute.For<IReceiptFinder>()).As<IReceiptFinder>();
+                containerBuilder.RegisterInstance(Substitute.For<ISigner>()).As<ISigner>();
+                containerBuilder.RegisterInstance(Substitute.For<ILogFinder>()).As<ILogFinder>();
+                containerBuilder.RegisterInstance(Substitute.For<ISignerStore>()).As<ISignerStore>();
+                containerBuilder.RegisterInstance(Substitute.For<IChainLevelInfoRepository>()).As<IChainLevelInfoRepository>();
+                containerBuilder.RegisterInstance(Substitute.For<IBlockStore>()).As<IBlockStore>();
+                containerBuilder.RegisterInstance(Substitute.For<IEthereumEcdsa>()).As<IEthereumEcdsa>();
                 containerBuilder.RegisterInstance(new ChainSpec());
                 container = containerBuilder.Build();
             }
@@ -100,30 +110,23 @@ namespace Nethermind.Runner.Test.Ethereum
             var api = new NethermindApi(container)
             {
                 TxPool = Substitute.For<ITxPool>(),
-                BlockTree = Substitute.For<IBlockTree>(),
                 SyncServer = Substitute.For<ISyncServer>(),
                 PeerManager = Substitute.For<IPeerManager>(),
                 PeerPool = Substitute.For<IPeerPool>(),
-                EthereumEcdsa = Substitute.For<IEthereumEcdsa>(),
                 MainBlockProcessor = Substitute.For<IBlockProcessor>(),
-                ReceiptStorage = Substitute.For<IReceiptStorage>(),
-                ReceiptFinder = Substitute.For<IReceiptFinder>(),
                 BlockValidator = Substitute.For<IBlockValidator>(),
                 RewardCalculatorSource = Substitute.For<IRewardCalculatorSource>(),
                 TxPoolInfoProvider = Substitute.For<ITxPoolInfoProvider>(),
                 StaticNodesManager = Substitute.For<IStaticNodesManager>(),
-                BloomStorage = Substitute.For<IBloomStorage>(),
                 Sealer = Substitute.For<ISealer>(),
                 Synchronizer = Substitute.For<ISynchronizer>(),
                 BlockchainProcessor = Substitute.For<IBlockchainProcessor>(),
                 BlockProducer = Substitute.For<IBlockProducer>(),
                 DiscoveryApp = Substitute.For<IDiscoveryApp>(),
-                EngineSigner = Substitute.For<ISigner>(),
                 FilterManager = Substitute.For<IFilterManager>(),
                 FilterStore = Substitute.For<IFilterStore>(),
                 GrpcServer = Substitute.For<IGrpcServer>(),
                 HeaderValidator = Substitute.For<IHeaderValidator>(),
-                LogFinder = Substitute.For<ILogFinder>(),
                 MonitoringService = Substitute.For<IMonitoringService>(),
                 ProtocolsManager = Substitute.For<IProtocolsManager>(),
                 ProtocolValidator = Substitute.For<IProtocolValidator>(),
@@ -135,13 +138,11 @@ namespace Nethermind.Runner.Test.Ethereum
                 TransactionProcessor = Substitute.For<ITransactionProcessor>(),
                 TxSender = Substitute.For<ITxSender>(),
                 BlockProcessingQueue = Substitute.For<IBlockProcessingQueue>(),
-                EngineSignerStore = Substitute.For<ISignerStore>(),
                 RpcModuleProvider = Substitute.For<IRpcModuleProvider>(),
                 SyncModeSelector = Substitute.For<ISyncModeSelector>(),
                 SyncPeerPool = Substitute.For<ISyncPeerPool>(),
                 PeerDifficultyRefreshPool = Substitute.For<IPeerDifficultyRefreshPool>(),
                 WebSocketsManager = Substitute.For<IWebSocketsManager>(),
-                ChainLevelInfoRepository = Substitute.For<IChainLevelInfoRepository>(),
                 TrieStore = Substitute.For<ITrieStore>(),
                 BlockProducerEnvFactory = Substitute.For<IBlockProducerEnvFactory>(),
                 TransactionComparerProvider = Substitute.For<ITransactionComparerProvider>(),
@@ -155,7 +156,6 @@ namespace Nethermind.Runner.Test.Ethereum
                 BetterPeerStrategy = Substitute.For<IBetterPeerStrategy>(),
                 ReceiptMonitor = Substitute.For<IReceiptMonitor>(),
                 WitnessRepository = Substitute.For<IWitnessRepository>(),
-                BadBlocksStore = Substitute.For<IBlockStore>()
             };
 
             api.WorldStateManager = new ReadOnlyWorldStateManager(api.DbProvider, Substitute.For<IReadOnlyTrieStore>(), LimboLogs.Instance);

@@ -36,6 +36,17 @@ namespace Nethermind.Blockchain.Find
             IBloomStorage? bloomStorage,
             ILogManager? logManager,
             IReceiptsRecovery? receiptsRecovery,
+            IReceiptConfig receiptConfig)
+        : this(blockFinder, receiptFinder, receiptStorage, bloomStorage, logManager, receiptsRecovery, receiptConfig.MaxBlockDepth)
+        {
+        }
+
+        public LogFinder(IBlockFinder? blockFinder,
+            IReceiptFinder? receiptFinder,
+            IReceiptStorage? receiptStorage,
+            IBloomStorage? bloomStorage,
+            ILogManager? logManager,
+            IReceiptsRecovery? receiptsRecovery,
             int maxBlockDepth = 1000)
         {
             _blockFinder = blockFinder ?? throw new ArgumentNullException(nameof(blockFinder));

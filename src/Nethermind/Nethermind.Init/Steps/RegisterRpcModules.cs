@@ -5,9 +5,11 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
 using Nethermind.Api;
 using Nethermind.Api.Extensions;
 using Nethermind.Blockchain.FullPruning;
+using Nethermind.Consensus;
 using Nethermind.Core;
 using Nethermind.Init.Steps.Migrations;
 using Nethermind.JsonRpc;
@@ -183,7 +185,6 @@ public class RegisterRpcModules : IStep
         rpcModuleProvider.RegisterSingle<ITxPoolRpcModule>(txPoolRpcModule);
 
         if (_api.SyncServer is null) throw new StepDependencyException(nameof(_api.SyncServer));
-        if (_api.EngineSignerStore is null) throw new StepDependencyException(nameof(_api.EngineSignerStore));
 
         NetRpcModule netRpcModule = new(_api.LogManager, new NetBridge(_api.Enode, _api.SyncServer));
         rpcModuleProvider.RegisterSingle<INetRpcModule>(netRpcModule);
@@ -194,7 +195,7 @@ public class RegisterRpcModules : IStep
             _api.BlockTree,
             _api.ReceiptFinder,
             _api.Enode,
-            _api.EngineSignerStore,
+            _api.BaseContainer.Resolve<ISignerStore>(),
             _api.KeyStore,
             _api.SpecProvider,
             _api.PeerManager);
