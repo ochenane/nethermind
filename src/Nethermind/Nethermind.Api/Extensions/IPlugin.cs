@@ -3,10 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Autofac;
 using Autofac.Core;
-using Jint.Native;
-using Nethermind.Config;
 
 namespace Nethermind.Api.Extensions
 {

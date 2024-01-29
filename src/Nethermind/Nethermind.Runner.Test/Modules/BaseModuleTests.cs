@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2024 Demerzel Solutions Limited
 // SPDX-License-Identifier: LGPL-3.0-only
 
-using Antlr4.Runtime.Misc;
 using Autofac;
 using FluentAssertions;
 using Nethermind.Api;
