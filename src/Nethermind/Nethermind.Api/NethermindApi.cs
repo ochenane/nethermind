@@ -95,7 +95,7 @@ namespace Nethermind.Api
         }
 
         public IAbiEncoder AbiEncoder { get; } = Nethermind.Abi.AbiEncoder.Instance;
-        public IBlobTxStorage? BlobTxStorage { get; set; }
+        public IBlobTxStorage BlobTxStorage => BaseContainer.Resolve<IBlobTxStorage>();
         public IBlockchainProcessor? BlockchainProcessor { get; set; }
         public CompositeBlockPreprocessorStep BlockPreprocessor { get; } = new();
         public IBlockProcessingQueue? BlockProcessingQueue { get; set; }
@@ -107,8 +107,7 @@ namespace Nethermind.Api
         public IChainLevelInfoRepository? ChainLevelInfoRepository { get; set; }
         public IConfigProvider ConfigProvider => BaseContainer.Resolve<IConfigProvider>();
         public ICryptoRandom CryptoRandom => BaseContainer.Resolve<ICryptoRandom>();
-        public IDbProvider? DbProvider { get; set; }
-        public IDbFactory? DbFactory { get; set; }
+        public IDbProvider DbProvider => BaseContainer.Resolve<IDbProvider>();
         public IDisconnectsAnalyzer? DisconnectsAnalyzer { get; set; }
         public IDiscoveryApp? DiscoveryApp { get; set; }
         public ISigner? EngineSigner { get; set; }

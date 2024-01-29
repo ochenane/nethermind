@@ -14,10 +14,9 @@ namespace Nethermind.Db
         private readonly IFileSystem _fileSystem;
 
         public StandardDbInitializer(
-            IDbProvider? dbProvider,
             IDbFactory? rocksDbFactory,
             IFileSystem? fileSystem = null)
-            : base(dbProvider, rocksDbFactory)
+            : base(new DbProvider(), rocksDbFactory)
         {
             _fileSystem = fileSystem ?? new FileSystem();
         }
@@ -69,13 +68,12 @@ namespace Nethermind.Db
             }
         }
 
-        private static DbSettings BuildDbSettings(string dbName, Action updateReadsMetrics, Action updateWriteMetrics, bool deleteOnStart = false)
+        private static DbSettings BuildDbSettings(string dbName, Action updateReadsMetrics, Action updateWriteMetrics)
         {
             return new(GetTitleDbName(dbName), dbName)
             {
                 UpdateReadMetrics = updateReadsMetrics,
                 UpdateWriteMetrics = updateWriteMetrics,
-                DeleteOnStart = deleteOnStart
             };
         }
     }

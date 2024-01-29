@@ -47,34 +47,61 @@ using NSubstitute;
 using Nethermind.Blockchain.Blocks;
 using Nethermind.Core;
 using Nethermind.Core.Timers;
+using Nethermind.Runner.Modules;
 
 namespace Nethermind.Runner.Test.Ethereum
 {
     public static class Build
     {
-        public static NethermindApi ContextWithMocks()
+        public static ContainerBuilder BasicTestContainerBuilder()
         {
-            var containerBuilder = new ContainerBuilder();
-            containerBuilder.RegisterInstance(Substitute.For<IConfigProvider>()).As<IConfigProvider>();
-            containerBuilder.RegisterInstance(Substitute.For<ILogManager>()).As<ILogManager>();
-            containerBuilder.RegisterInstance(Substitute.For<ISpecProvider>()).As<ISpecProvider>();
-            containerBuilder.RegisterInstance(Substitute.For<IProcessExitSource>()).As<IProcessExitSource>();
-            containerBuilder.RegisterInstance(Substitute.For<IGasLimitCalculator>()).As<IGasLimitCalculator>();
-            containerBuilder.RegisterInstance(Substitute.For<INodeStatsManager>()).As<INodeStatsManager>();
-            containerBuilder.RegisterInstance(Substitute.For<ITimerFactory>()).As<ITimerFactory>();
-            containerBuilder.RegisterInstance(Substitute.For<ITimestamper>()).As<ITimestamper>();
-            containerBuilder.RegisterInstance(Substitute.For<IWallet>()).As<IWallet>();
-            containerBuilder.RegisterInstance(Substitute.For<IFileSystem>()).As<IFileSystem>();
-            containerBuilder.RegisterInstance(Substitute.For<IKeyStore>()).As<IKeyStore>();
-            containerBuilder.RegisterInstance(Substitute.For<IEnode>()).As<IEnode>();
-            containerBuilder.RegisterInstance(new ChainSpec());
+            ContainerBuilder builder = new ContainerBuilder();
+            IConfigProvider configProvider = new ConfigProvider();
 
-            var api = new NethermindApi(containerBuilder.Build())
+            builder.RegisterInstance(new EthereumJsonSerializer()).AsImplementedInterfaces();
+            builder.RegisterInstance(LimboLogs.Instance).AsImplementedInterfaces();
+            builder.RegisterInstance(configProvider);
+            builder.RegisterInstance(Substitute.For<IProcessExitSource>());
+            builder.RegisterInstance(new ChainSpec());
+
+            builder.RegisterModule(new BaseModule());
+            builder.RegisterModule(new DatabaseModule(configProvider));
+            builder.RegisterModule(new NetworkModule());
+            builder.RegisterInstance<IDbFactory>(new MemDbFactory());
+
+            builder.RegisterInstance(MainnetSpecProvider.Instance)
+                .As<ISpecProvider>();
+
+            return builder;
+        }
+
+        public static NethermindApi ContextWithMocks(IContainer container = null)
+        {
+            if (container == null)
+            {
+                var containerBuilder = new ContainerBuilder();
+                containerBuilder.RegisterInstance(Substitute.For<IConfigProvider>()).As<IConfigProvider>();
+                containerBuilder.RegisterInstance(Substitute.For<ILogManager>()).As<ILogManager>();
+                containerBuilder.RegisterInstance(Substitute.For<ISpecProvider>()).As<ISpecProvider>();
+                containerBuilder.RegisterInstance(Substitute.For<IProcessExitSource>()).As<IProcessExitSource>();
+                containerBuilder.RegisterInstance(Substitute.For<IGasLimitCalculator>()).As<IGasLimitCalculator>();
+                containerBuilder.RegisterInstance(Substitute.For<INodeStatsManager>()).As<INodeStatsManager>();
+                containerBuilder.RegisterInstance(Substitute.For<ITimerFactory>()).As<ITimerFactory>();
+                containerBuilder.RegisterInstance(Substitute.For<ITimestamper>()).As<ITimestamper>();
+                containerBuilder.RegisterInstance(Substitute.For<IWallet>()).As<IWallet>();
+                containerBuilder.RegisterInstance(Substitute.For<IFileSystem>()).As<IFileSystem>();
+                containerBuilder.RegisterInstance(Substitute.For<IKeyStore>()).As<IKeyStore>();
+                containerBuilder.RegisterInstance(Substitute.For<IEnode>()).As<IEnode>();
+                containerBuilder.RegisterInstance(Substitute.For<IDbProvider>()).As<IDbProvider>();
+                containerBuilder.RegisterInstance(new ChainSpec());
+                container = containerBuilder.Build();
+            }
+
+            var api = new NethermindApi(container)
             {
                 TxPool = Substitute.For<ITxPool>(),
                 BlockTree = Substitute.For<IBlockTree>(),
                 SyncServer = Substitute.For<ISyncServer>(),
-                DbProvider = TestMemDbProvider.Init(),
                 PeerManager = Substitute.For<IPeerManager>(),
                 PeerPool = Substitute.For<IPeerPool>(),
                 EthereumEcdsa = Substitute.For<IEthereumEcdsa>(),

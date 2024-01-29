@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Nethermind.Db
 {
-    public interface IDbProvider : IDisposable
+    public interface IDbProvider
     {
         public IDb StateDb => GetDb<IDb>(DbNames.State);
         public IDb CodeDb => GetDb<IDb>(DbNames.Code);

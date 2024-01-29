@@ -18,14 +18,6 @@ namespace Nethermind.Db
         public IDictionary<string, IDb> RegisteredDbs => _registeredDbs;
         public IDictionary<string, object> RegisteredColumnDbs => _registeredColumnDbs;
 
-        public void Dispose()
-        {
-            foreach (KeyValuePair<string, IDb> registeredDb in _registeredDbs)
-            {
-                registeredDb.Value?.Dispose();
-            }
-        }
-
         public T GetDb<T>(string dbName) where T : class, IDb
         {
             if (!_registeredDbs.TryGetValue(dbName, out IDb? found))
@@ -69,6 +61,11 @@ namespace Nethermind.Db
         }
 
         public void RegisterColumnDb<T>(string dbName, IColumnsDb<T> db)
+        {
+            RegisterColumnDb(dbName, (object) db);
+        }
+
+        public void RegisterColumnDb(string dbName, object db)
         {
             if (_registeredColumnDbs.ContainsKey(dbName))
             {

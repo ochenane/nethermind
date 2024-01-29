@@ -31,6 +31,7 @@ using Nethermind.Evm;
 using Nethermind.Evm.TransactionProcessing;
 using Nethermind.Int256;
 using Nethermind.Logging;
+using Nethermind.Runner.Modules;
 using Nethermind.Serialization.Json;
 using Nethermind.Specs;
 using Nethermind.Specs.ChainSpecStyle;
@@ -81,7 +82,7 @@ public class TestBlockchain : IDisposable
     public IDb StateDb => DbProvider.StateDb;
     public TrieStore TrieStore { get; set; } = null!;
     public IBlockProducer BlockProducer { get; private set; } = null!;
-    public IDbProvider DbProvider { get; set; } = null!;
+    public IDbProvider DbProvider => Container.Resolve<IDbProvider>();
     public ISpecProvider SpecProvider => Container.Resolve<ISpecProvider>();
     protected ChainSpec ChainSpec => Container.Resolve<ChainSpec>();
 
@@ -124,16 +125,20 @@ public class TestBlockchain : IDisposable
 
     protected virtual async Task<TestBlockchain> Build(ISpecProvider? specProvider = null, UInt256? initialValues = null, bool addBlockOnStart = true)
     {
+        IConfigProvider configProvider = new ConfigProvider();
         Timestamper = new ManualTimestamper(new DateTime(2020, 2, 15, 12, 50, 30, DateTimeKind.Utc));
 
-        ContainerBuilder containerBuilder = Builders.Build.A.BasicTestContainerBuilder();
-        containerBuilder.RegisterInstance(CreateSpecProvider(specProvider ?? MainnetSpecProvider.Instance));
-        containerBuilder.RegisterInstance(Timestamper).AsImplementedInterfaces();
-        ConfigureContainer(containerBuilder);
-        Container = containerBuilder.Build();
+        ContainerBuilder builder = Builders.Build.A.BasicTestContainerBuilder();
+        builder.RegisterInstance(configProvider);
+        builder.RegisterModule(new BaseModule());
+        builder.RegisterModule(new DatabaseModule(configProvider));
+        builder.RegisterInstance<IDbFactory>(new MemDbFactory());
+        builder.RegisterInstance(CreateSpecProvider(specProvider ?? MainnetSpecProvider.Instance));
+        builder.RegisterInstance(Timestamper).AsImplementedInterfaces();
+        ConfigureContainer(builder);
+        Container = builder.Build();
 
         EthereumEcdsa = new EthereumEcdsa(SpecProvider.ChainId, LogManager);
-        DbProvider = await CreateDbProvider();
         TrieStore = new TrieStore(StateDb, LogManager);
         State = new WorldState(TrieStore, DbProvider.CodeDb, LogManager);
 
@@ -248,8 +253,6 @@ public class TestBlockchain : IDisposable
     {
         _resetEvent.Release(1);
     }
-
-    protected virtual Task<IDbProvider> CreateDbProvider() => TestMemDbProvider.InitAsync();
 
     private async Task WaitAsync(SemaphoreSlim semaphore, string error, int timeout = DefaultTimeout)
     {
@@ -425,14 +428,8 @@ public class TestBlockchain : IDisposable
     public virtual void Dispose()
     {
         BlockProducer?.StopAsync();
-        if (DbProvider is not null)
-        {
-            CodeDb?.Dispose();
-            StateDb?.Dispose();
-        }
-
+        Container.Dispose();
         _trieStoreWatcher?.Dispose();
-        DbProvider?.Dispose();
     }
 
     /// <summary>

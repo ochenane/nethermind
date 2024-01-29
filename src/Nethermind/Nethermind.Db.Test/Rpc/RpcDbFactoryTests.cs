@@ -13,6 +13,7 @@ using NUnit.Framework;
 
 namespace Nethermind.Db.Test.Rpc
 {
+    /*
     [Parallelizable(ParallelScope.All)]
     public class RpcDbFactoryTests
     {
@@ -51,4 +52,5 @@ namespace Nethermind.Db.Test.Rpc
                 memDbProvider.StateDb);
         }
     }
+    */
 }

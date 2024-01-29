@@ -77,7 +77,7 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
     [TestCase(
         "0xa66ec67b117f57388da53271f00c22a68e6c297b564f67c5904e6f2662881875",
         "0xe168b70ac8a6f7d90734010030801fbb2dcce03a657155c4024b36ba8d1e3926"
-        )]
+    )]
     [Parallelizable(ParallelScope.None)]
     [Obsolete]
     public override Task forkchoiceUpdatedV1_should_communicate_with_boost_relay_through_http(string blockHash, string parentHash)
@@ -103,8 +103,6 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
             base.ConfigureContainer(builder);
 
             builder.RegisterModule(new AuRaPlugin.AuraModule());
-            builder.RegisterInstance(new ConfigProvider()).AsImplementedInterfaces();
-            builder.RegisterInstance(Substitute.For<IProcessExitSource>());
             builder.RegisterInstance(new ChainSpec()
             {
                 SealEngineType = Core.SealEngineType.AuRa,
@@ -119,9 +117,7 @@ public class AuRaMergeEngineModuleTests : EngineModuleTests
         protected override IBlockProcessor CreateBlockProcessor()
         {
             _api = Container.Resolve<AuRaNethermindApi>();
-
             _api.BlockTree = BlockTree;
-            _api.DbProvider = DbProvider;
             _api.WorldStateManager = WorldStateManager;
             _api.TransactionComparerProvider = TransactionComparerProvider;
             _api.TxPool = TxPool;

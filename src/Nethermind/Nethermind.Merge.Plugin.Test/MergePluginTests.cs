@@ -3,6 +3,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Autofac;
 using FluentAssertions;
 using Nethermind.Api;
 using Nethermind.Blockchain.Synchronization;
@@ -15,6 +16,7 @@ using Nethermind.Db;
 using Nethermind.JsonRpc;
 using Nethermind.JsonRpc.Modules;
 using Nethermind.Merge.Plugin.BlockProduction;
+using Nethermind.Network.Config;
 using Nethermind.Specs.ChainSpecStyle;
 using NUnit.Framework;
 using NSubstitute;
@@ -36,13 +38,29 @@ public class MergePluginTests
         BlocksConfig? miningConfig = new();
         IJsonRpcConfig jsonRpcConfig = new JsonRpcConfig() { Enabled = true, EnabledModules = new[] { ModuleType.Engine } };
 
-        _context = Build.ContextWithMocks();
-        _context.ConfigProvider.GetConfig<IMergeConfig>().Returns(_mergeConfig);
-        _context.ConfigProvider.GetConfig<ISyncConfig>().Returns(new SyncConfig());
-        _context.ConfigProvider.GetConfig<IBlocksConfig>().Returns(miningConfig);
-        _context.ConfigProvider.GetConfig<IJsonRpcConfig>().Returns(jsonRpcConfig);
+        ChainSpec chainSpec = new ChainSpec();
+        chainSpec.SealEngineType = SealEngineType.Clique;
+        chainSpec.Clique = new CliqueParameters()
+        {
+            Epoch = CliqueConfig.Default.Epoch,
+            Period = CliqueConfig.Default.BlockPeriod
+        };
+
+        IConfigProvider configProvider = Substitute.For<IConfigProvider>();
+        configProvider.GetConfig<IMergeConfig>().Returns(_mergeConfig);
+        configProvider.GetConfig<ISyncConfig>().Returns(new SyncConfig());
+        configProvider.GetConfig<IBlocksConfig>().Returns(miningConfig);
+        configProvider.GetConfig<IJsonRpcConfig>().Returns(jsonRpcConfig);
+        configProvider.GetConfig<INetworkConfig>().Returns(new NetworkConfig());
+
+        ContainerBuilder containerBuilder = Build.BasicTestContainerBuilder();
+        containerBuilder.RegisterInstance(configProvider);
+        containerBuilder.RegisterInstance(chainSpec);
+
+        IContainer container = containerBuilder.Build();
+
+        _context = Build.ContextWithMocks(container);
         _context.BlockProcessingQueue?.IsEmpty.Returns(true);
-        _context.DbFactory = new MemDbFactory();
         _context.BlockProducerEnvFactory = new BlockProducerEnvFactory(
             _context.WorldStateManager!,
             _context.BlockTree!,
@@ -55,12 +73,6 @@ public class MergePluginTests
             _context.TransactionComparerProvider!,
             miningConfig,
             _context.LogManager!);
-        _context.ChainSpec.SealEngineType = SealEngineType.Clique;
-        _context.ChainSpec!.Clique = new CliqueParameters()
-        {
-            Epoch = CliqueConfig.Default.Epoch,
-            Period = CliqueConfig.Default.BlockPeriod
-        };
         _plugin = new MergePlugin(_context.ChainSpec, _mergeConfig);
 
         _consensusPlugin = new(_context.ChainSpec);
