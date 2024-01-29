@@ -116,7 +116,7 @@ namespace Nethermind.Store.Test.Witnesses
 
             public Context(int cacheSize)
             {
-                WitnessCollector = new WitnessCollector(new MemDb(), LimboLogs.Instance);
+                WitnessCollector = new WitnessCollector(new MemDb(), LimboLogs.Logger);
                 Database = new WitnessingStore(new CachingStore(Wrapped, cacheSize), WitnessCollector);
             }
         }

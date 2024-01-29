@@ -131,7 +131,7 @@ public class RegisterRpcModules : IStep
             _api.BlockPreprocessor,
             _api.RewardCalculatorSource,
             _api.ReceiptStorage,
-            new ReceiptMigration(_api),
+            _api.BaseContainer.Resolve<ReceiptMigration>(),
             _api.ConfigProvider,
             _api.SpecProvider,
             _api.SyncModeSelector,

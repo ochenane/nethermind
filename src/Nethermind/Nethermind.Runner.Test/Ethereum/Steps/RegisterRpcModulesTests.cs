@@ -11,6 +11,7 @@ using Nethermind.Init.Steps;
 using Nethermind.JsonRpc;
 using Nethermind.JsonRpc.Modules;
 using Nethermind.JsonRpc.Modules.Proof;
+using Nethermind.Synchronization.ParallelSync;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -27,6 +28,7 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
 
             ContainerBuilder containerBuilder = Build.BasicTestContainerBuilder();
             containerBuilder.RegisterInstance(jsonRpcConfig).As<IJsonRpcConfig>();
+            containerBuilder.RegisterInstance(Substitute.For<ISyncModeSelector>()).As<ISyncModeSelector>();
             NethermindApi context = Build.ContextWithMocks(containerBuilder.Build());
 
             RegisterRpcModules registerRpcModules = new(context);
@@ -40,8 +42,11 @@ namespace Nethermind.Runner.Test.Ethereum.Steps
         {
             JsonRpcConfig jsonRpcConfig = new() { Enabled = false };
 
-            NethermindApi context = Build.ContextWithMocks();
-            context.ConfigProvider.GetConfig<IJsonRpcConfig>().Returns(jsonRpcConfig);
+            ContainerBuilder containerBuilder = Build.BasicTestContainerBuilder();
+            containerBuilder.RegisterInstance(jsonRpcConfig).As<IJsonRpcConfig>();
+            containerBuilder.RegisterInstance(Substitute.For<ISyncModeSelector>()).As<ISyncModeSelector>();
+            NethermindApi context = Build.ContextWithMocks(containerBuilder.Build());
+
             context.RpcModuleProvider.Enabled.Returns(Array.Empty<string>());
 
             RegisterRpcModules registerRpcModules = new(context);

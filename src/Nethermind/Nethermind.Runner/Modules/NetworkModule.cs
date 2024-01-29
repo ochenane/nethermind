@@ -9,6 +9,7 @@ using Nethermind.Logging;
 using Nethermind.Network;
 using Nethermind.Network.Config;
 using Nethermind.Stats;
+using Nethermind.Synchronization.ParallelSync;
 using Nethermind.Synchronization.Peers;
 
 namespace Nethermind.Runner.Modules;
@@ -34,7 +35,7 @@ public class NetworkModule : Module
             .SingleInstance();
 
         builder.Register<EnodeContainer, IEnode>(container => container.Enode);
-
         builder.Register<INethermindApi, ISyncPeerPool>(api => api.SyncPeerPool);
+        builder.Register<INethermindApi, ISyncModeSelector>(api => api.SyncModeSelector);
     }
 }

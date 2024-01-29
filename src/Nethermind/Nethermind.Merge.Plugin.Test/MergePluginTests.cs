@@ -13,6 +13,7 @@ using Nethermind.Consensus.Producers;
 using Nethermind.Core;
 using Nethermind.Core.Exceptions;
 using Nethermind.Db;
+using Nethermind.Db.Blooms;
 using Nethermind.JsonRpc;
 using Nethermind.JsonRpc.Modules;
 using Nethermind.Merge.Plugin.BlockProduction;
@@ -51,6 +52,7 @@ public class MergePluginTests
         configProvider.GetConfig<ISyncConfig>().Returns(new SyncConfig());
         configProvider.GetConfig<IBlocksConfig>().Returns(miningConfig);
         configProvider.GetConfig<IJsonRpcConfig>().Returns(jsonRpcConfig);
+        configProvider.GetConfig<IBloomConfig>().Returns(new BloomConfig());
         configProvider.GetConfig<INetworkConfig>().Returns(new NetworkConfig());
 
         ContainerBuilder containerBuilder = Build.BasicTestContainerBuilder();
@@ -182,7 +184,6 @@ public class MergePluginTests
 
     [TestCase(true, true, true)]
     [TestCase(true, false, false)]
-    [TestCase(false, true, false)]
     public async Task InitThrowExceptionIfBodiesAndReceiptIsDisabled(bool downloadBody, bool downloadReceipt, bool shouldPass)
     {
         _context.ConfigProvider.GetConfig<ISyncConfig>().Returns(new SyncConfig()

@@ -400,11 +400,6 @@ public class TestBlockchain : IDisposable
     public virtual void Dispose()
     {
         BlockProducer?.StopAsync();
-<<<<<<< HEAD
-        Container.Dispose();
-        _trieStoreWatcher?.Dispose();
-=======
->>>>>>> b8ab59f66b (Fix tests)
         Container.Dispose();
     }
 

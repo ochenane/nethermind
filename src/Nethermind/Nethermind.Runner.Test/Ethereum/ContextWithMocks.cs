@@ -86,6 +86,11 @@ namespace Nethermind.Runner.Test.Ethereum
             return builder;
         }
 
+        public static NethermindApi ContextWithMocksAndBasicContainer(IContainer container = null)
+        {
+            return ContextWithMocks(BasicTestContainerBuilder().Build());
+        }
+
         public static NethermindApi ContextWithMocks(IContainer container = null)
         {
             if (container == null)
