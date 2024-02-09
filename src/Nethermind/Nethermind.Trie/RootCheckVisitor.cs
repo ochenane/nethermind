@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using Nethermind.Core;
 using Nethermind.Core.Crypto;
 
 namespace Nethermind.Trie
@@ -12,7 +13,7 @@ namespace Nethermind.Trie
 
         public bool IsFullDbScan => false;
 
-        public bool ShouldVisit(Hash256 nextNode)
+        public bool ShouldVisit(Hash256 nodeHash)
         {
             return false;
         }

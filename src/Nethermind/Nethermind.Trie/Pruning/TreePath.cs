@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Nethermind.Core.Attributes;
 using Nethermind.Core.Crypto;
@@ -228,6 +229,19 @@ public struct TreePath
         {
             _path.TruncateMut(_previousLength);
         }
+    }
+
+    public byte[] ToNibbles()
+    {
+        byte[] theBytes = new byte[Length];
+
+        // TODO: Optimize this
+        for (int i = 0; i < Length; i++)
+        {
+            theBytes[i] = this[i];
+        }
+
+        return theBytes;
     }
 }
 
